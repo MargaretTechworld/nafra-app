@@ -9,8 +9,8 @@ export default function WelcomeScreen() {
     <div className="welcome-screen">
       <img className="logo" src={logo} alt="Logo" />
       <div className="welcome-content">
-        <h1>NaFRA DATA PORTAL</h1>
-        <h1>Welcome</h1>
+        <h1> WELCOME</h1>
+        <p>To NaFRA&apos;s DATA PORTAL</p>
         <button
           className="login-button"
           type="button"
@@ -18,7 +18,11 @@ export default function WelcomeScreen() {
         >
           Login
         </button>
-        <button className="signup-button" type="button">
+        <button
+          className="signup-button"
+          type="button"
+          onClick={() => navigate('/signup')}
+        >
           Sign Up
         </button>
       </div>

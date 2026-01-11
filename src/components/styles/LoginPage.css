@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
 }
+
 .login-page-left {
   position: relative;
   background-image: url('../../img/login-img.jpg');
@@ -17,48 +18,112 @@
   align-items: center;
   justify-content: center;
 }
+
 .login-page-right {
   width: 50%;
   display: flex;
+  text-align: center;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
 }
-.login-page-left-img{
-    position: absolute;
-    top: 15%;
-    left: 85%;
-    transform: translate(-50%, -50%);
-    width: 20%;
+
+.login-page-hr {
+  width: 30%;
+  margin-top: 70px;
+  border: 1px solid  #ec8106;
 }
+
+.login-page-left-img {
+  position: absolute;
+  top: 10%;
+  left: 40px;
+  width: 100px;
+}
+
 .login-input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
 }
-.login-page-button{
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: none;
-    border-radius: 5px;
-    background-color: #3da54b;
-    color: white;
-    cursor: pointer;
+
+.login-page-button {
+  width: 100%;
+  padding: 11px 5px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  background-color: #3da54b;
+  color: white;
+  cursor: pointer;
 }
-.signup-page-button{
-    margin: 10px 0;
-    border: none;
-    background-color: none;
-    color: black;
-    cursor: pointer;
+
+.signup-page-button {
+  margin: 10px 0;
+  border: none;
+  background: none;
+  color: #eb2424;
+  cursor: pointer;
 }
-.login-page-button:hover{
-    background-color: #ec8106;
+
+.login-page-button:hover {
+  background-color: #ec8106;
 }
-.signup-page-button:hover{
-    color: #eb2424;
+
+.signup-page-button:hover {
+  color: #3da54b;
+}
+
+.login-page-right p {
+  text-align: center;
+}
+
+.password-input-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.password-input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.password-toggle-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .login-page-right {
+    width: 20%;
+  }
+
+  .login-page {
+    flex-direction: row;
+  }
+
+  .login-page-left {
+    width: 50%;
+    height: 100vh;
+  }
+
+  .login-page-left-img {
+    left: 50px;
+    width: 110px;
+    top: 4%;
+  }
 }

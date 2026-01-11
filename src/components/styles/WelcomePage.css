@@ -41,7 +41,7 @@
 
 .welcome-content button {
   margin: 10px;
-  padding: 10px 30px;
+  padding: 8px 50px;
   border: none;
   cursor: pointer;
   border-radius: 20px;
@@ -51,6 +51,12 @@
 
 .welcome-content button:hover {
   background-color: #ec8106;
+}
+
+.welcome-content p {
+  color: #f7f4f4;
+  font-size: 2rem;
+  margin-bottom: 20px;
 }
 
 .login-button {

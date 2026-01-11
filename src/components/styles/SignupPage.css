@@ -1,0 +1,28 @@
+.signup-page-left {
+  position: relative;
+  background-image: url('../../img/signup-img.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 100%;
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-page-right h2 {
+  font-size: 1.2rem;
+}
+
+.signup-page-button {
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .signup-page-left {
+    width: 50%;
+    height: 100vh;
+  }
+}
