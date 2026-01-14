@@ -1,3 +1,539 @@
-* {
-  background-color: aqua;
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  padding: 2%;
+}
+
+.form-logo {
+  width: 100px;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.header-text p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.nafra-form-input-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0.3% 5%;
+}
+
+.welcome-login {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3%;
+  margin-top: 2%;
+}
+
+.welcome-login button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.welcome-login button:hover {
+  color: blue;
+}
+
+.form-welcome-message p {
+  text-align: center;
+  margin-bottom: 3%;
+}
+
+.nafra-form-input-fields {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 2%;
+  margin-bottom: 5%;
+  padding: 16px;
+}
+
+/* .nafra-form-input-fields button{
+  background-color:  #14bae9;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+.nafra-form-input-fields button:hover{
+  background-color: #08915b;
+} */
+.nafra-form-data-collected {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  max-width: 600px;
+}
+
+.nafra-form-data-collected-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.nafra-form-data-collected-body {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 30vh;
+}
+
+.district-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 6px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.district-row:last-child {
+  border-bottom: none;
+}
+
+.district-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #222;
+}
+
+.district-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-icon {
+  color: #14bae9;
+}
+
+.delete-icon {
+  color: #e63946;
+}
+
+.view-icon {
+  color: #2a9d8f;
+}
+
+.district-actions button:hover svg {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+.district-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 30, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1200;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.district-modal {
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(10, 20, 30, 0.35);
+  display: flex;
+  width: 90%;
+  max-width: 640px;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleIn 0.4s ease forwards;
+}
+
+.district-modal-header {
+  padding: 24px 28px 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(8, 145, 91, 0.12);
+}
+
+.district-modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #0b2a22;
+}
+
+.district-modal-header p {
+  margin: 4px 0 0;
+  color: #4a5b58;
+}
+
+.close-modal-btn {
+  border: none;
+  background: none;
+  color: #08915b;
+  font-size: 1.4rem;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: rgba(20, 186, 233, 0.2);
+}
+
+.district-modal-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field-error {
+  color: #e63946;
+  font-size: 0.85rem;
+  margin: -4px 0 0;
+}
+
+.modal-section label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #0b2a22;
+}
+
+.modal-section select,
+.modal-section input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 28, 48, 0.18);
+  font-size: 0.95rem;
+}
+
+.modal-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-section-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0b2a22;
+}
+
+.add-row-btn,
+.link-btn {
+  border: none;
+  background: none;
+  color: #08915b;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s ease;
+}
+
+.add-row-btn:hover,
+.link-btn:hover {
+  background: rgba(20, 186, 233, 0.2);
+}
+
+.chiefdom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.chiefdom-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 28, 48, 0.08);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 18px rgba(12, 32, 52, 0.08);
+}
+
+.chiefdom-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.chiefdom-card-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.collapse-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-arrow {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #0b2a22;
+  border-bottom: 2px solid #0b2a22;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.collapse-arrow.open {
+  transform: rotate(-135deg);
+}
+
+.chiefdom-card-header h5 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.remove-row-btn {
+  border: none;
+  background: rgba(230, 57, 70, 0.12);
+  color: #e63946;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.remove-row-btn.small {
+  align-self: flex-end;
+  margin-top: auto;
+  font-size: 0.85rem;
+}
+
+.chiefdom-card-subheader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.chiefdom-card-subheader h6 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.fertilizer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fertilizer-row {
+  border: 1px solid rgba(15, 28, 48, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fbfefe;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fertilizer-field-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fertilizer-field-inline > div {
+  flex: 1;
+  min-width: 120px;
+}
+
+.district-modal-footer {
+  border-top: 1px solid rgba(8, 145, 91, 0.12);
+  padding: 18px 28px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  background: #fdfefe;
+  justify-content: space-between;
+}
+
+.bag-total-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 600;
+  color: #0b2a22;
+  flex-direction: column;
+}
+
+.modal-footer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.secondary-btn,
+.primary-btn {
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.secondary-btn {
+  background: rgba(17, 24, 39, 0.08);
+  color: #0f172a;
+}
+
+.primary-btn {
+  background: linear-gradient(120deg, #08915b, #14bae9);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(8, 145, 91, 0.25);
+}
+
+.modal-error {
+  color: #e63946;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: translateY(20px) scale(0.96);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.submit-button {
+  width: 50%;
+  margin: 5% auto;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+  background-color: #08915b;
+  border: none;
+  color: white;
+  font-size: 16px;
+}
+
+.submit-button:hover {
+  background-color: #14bae9;
+}
+
+@media (min-width: 768px) {
+  .nafra-data-form {
+    display: flex;
+    width: 100%;
+    margin-top: 0;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #444;
+    position: fixed;
+  }
+
+  .form-content {
+    background-color: #fff;
+    padding: 2%;
+    height: 100vh;
+    width: 50%;
+    margin: 0 auto;
+  }
+
+  .nafra-form-input-fields {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .submit-button {
+    width: 100px;
+  }
+
+  .form-welcome-message p {
+    margin-bottom: 2%;
+  }
+
+  .welcome-login {
+    margin-bottom: 2%;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-section label {
+    text-align: center;
+  }
+
+  .close-modal-btn:hover {
+    background: none;
+  }
+
+  .add-row-btn,
+  .link-btn {
+    padding: 5px 6px;
+    border-radius: 8px;
+  }
+
+  .chiefdom-grid {
+    justify-content: center;
+  }
+
+  .modal-section {
+    padding: 2%;
+  }
 }

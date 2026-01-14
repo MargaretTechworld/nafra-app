@@ -1,0 +1,185 @@
+.district-edit-modal {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  max-height: 90vh;
+  width: 90vw;
+  margin: 20px auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.district-edit-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.district-edit-modal .modal-header h2 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.district-edit-modal .modal-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.district-edit-modal .form-field {
+  margin-bottom: 20px;
+}
+
+.district-edit-modal .form-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #374151;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.district-edit-modal .form-field input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.district-edit-modal .form-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.district-edit-modal .form-field input.error {
+  border-color: #ef4444;
+}
+
+.district-edit-modal .error-message {
+  display: block;
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.district-edit-modal .chiefdoms-section {
+  margin-top: 24px;
+}
+
+.district-edit-modal .chiefdoms-section h3 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.district-edit-modal .chiefdom-edit-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.district-edit-modal .chiefdom-edit-card h4 {
+  margin: 0 0 16px 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.district-edit-modal .fertilizers-section {
+  margin-top: 16px;
+}
+
+.district-edit-modal .fertilizers-section h5 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.district-edit-modal .fertilizer-edit-item {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.district-edit-modal .fertilizer-edit-item .form-field {
+  margin-bottom: 12px;
+}
+
+.district-edit-modal .fertilizer-edit-item .form-field:last-child {
+  margin-bottom: 0;
+}
+
+.district-edit-modal .modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.close-modal-btn:hover {
+  color: #374151;
+}
+
+.primary-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.primary-btn:hover {
+  background: #2563eb;
+}
+
+.secondary-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.secondary-btn:hover {
+  background: #e5e7eb;
+}
