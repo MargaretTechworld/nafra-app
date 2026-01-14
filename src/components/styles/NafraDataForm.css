@@ -39,12 +39,6 @@
   margin-top: 2%;
 }
 
-.welcome-login button {
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
 /* Animated FSRP text */
 .organization-name {
   color: #08915b; /* blue */
@@ -59,21 +53,27 @@
   0% {
     transform: translateX(0);
   }
+
   10% {
     transform: translateX(-2px);
   }
+
   20% {
     transform: translateX(2px);
   }
+
   30% {
     transform: translateX(-2px);
   }
+
   40% {
     transform: translateX(2px);
   }
+
   50% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(0);
   }
@@ -92,10 +92,9 @@
 
 .welcome-login button:hover {
   background: none;
-  color:red;
+  color: red;
   transform: translateY(-2px);
 }
-
 
 .form-welcome-message p {
   text-align: center;
