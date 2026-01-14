@@ -822,11 +822,17 @@ export default function NafraDataForm() {
           <hr />
           <div className="form-welcome-message">
             <div className="welcome-login">
-              <h1>Welcome FSRP</h1>
+              <h1>
+                Welcome
+                {' '}
+                <span className="organization-name">FSRP</span>
+              </h1>
+
               <button type="button" onClick={handleLogout}>
                 Logout
               </button>
             </div>
+
             <p>Please carefully fill out the form below to submit your data.</p>
           </div>
 
@@ -923,6 +929,7 @@ export default function NafraDataForm() {
                         value={districtForm.customDistrict}
                         onChange={handleCustomDistrictChange}
                         aria-describedby="district-custom-error"
+                        required
                       />
                     </FormLabel>
                     <FieldError id="district-custom-error" message={districtErrors.customDistrict} />
@@ -1039,6 +1046,7 @@ export default function NafraDataForm() {
                                     )}
                                     aria-invalid={Boolean(cdomEr.name)}
                                     aria-describedby={cdomEr.name ? chiefdomNameErrorId : undefined}
+                                    required
                                   />
                                 </FormLabel>
                                 <FieldError id={chiefdomNameErrorId} message={cdomEr.name} />
@@ -1062,6 +1070,7 @@ export default function NafraDataForm() {
                                   )}
                                   aria-invalid={Boolean(cdomEr.dealership)}
                                   aria-describedby={cdomEr.dealership ? dealErrorId : undefined}
+                                  required
                                 />
                               </FormLabel>
                               <FieldError id={dealErrorId} message={cdomEr.dealership} />
@@ -1136,6 +1145,7 @@ export default function NafraDataForm() {
                                               aria-describedby={
                                                 ftEr.name ? FNameErrorId : undefined
                                               }
+                                              required
                                             />
                                           </FormLabel>
                                           <FieldError
@@ -1188,6 +1198,7 @@ export default function NafraDataForm() {
                                                 ? bagCountErrorId
                                                 : undefined
                                             }
+                                            required
                                           />
                                         </FormLabel>
                                         <FieldError

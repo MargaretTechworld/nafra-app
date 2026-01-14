@@ -146,7 +146,7 @@
 }
 
 .primary-btn {
-  background: #3b82f6;
+  background: linear-gradient(120deg, #08915b, #14bae9);
   color: white;
   border: none;
   padding: 8px 16px;
