@@ -27,7 +27,7 @@ export default function LoginPage() {
       return 'Email is required.';
     }
     if (!isCorporateEmail(value)) {
-      return 'Please use your official NaFRA email (e.g. user@nafra.gov).';
+      return 'Please use your official (e.g. user@nafra.gov).';
     }
     return '';
   };
@@ -38,7 +38,7 @@ export default function LoginPage() {
       setEmailError('');
       return;
     }
-    setEmailError(isCorporateEmail(value) ? '' : 'Only NaFRA corporate emails are allowed.');
+    setEmailError(isCorporateEmail(value) ? '' : 'Only corporate emails are allowed.');
   };
 
   const handleSubmit = (event) => {
