@@ -38,6 +38,9 @@
   margin-bottom: 3%;
   margin-top: 2%;
 }
+.welcome-login h1{
+  font-size: 24px;
+}
 
 /* Animated FSRP text */
 .organization-name {
@@ -81,7 +84,7 @@
 
 .welcome-login button {
   background: none;
-  color: blue;
+  color: #14bae9;
   border: none;
   padding: 10px 18px;
   font-size: 14px;
