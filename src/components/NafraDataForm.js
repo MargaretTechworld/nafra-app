@@ -822,11 +822,17 @@ export default function NafraDataForm() {
           <hr />
           <div className="form-welcome-message">
             <div className="welcome-login">
-              <h1>Welcome FSRP</h1>
+              <h1>
+                Welcome
+                {' '}
+                <span className="organization-name">FSRP</span>
+              </h1>
+
               <button type="button" onClick={handleLogout}>
                 Logout
               </button>
             </div>
+
             <p>Please carefully fill out the form below to submit your data.</p>
           </div>
 

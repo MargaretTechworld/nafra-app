@@ -45,9 +45,57 @@
   cursor: pointer;
 }
 
-.welcome-login button:hover {
-  color: blue;
+/* Animated FSRP text */
+.organization-name {
+  color: #08915b; /* blue */
+  font-weight: 700;
+  margin-left: 6px;
+  display: inline-block;
+  animation: welcomeShake 2.5s ease-in-out infinite;
 }
+
+/* Subtle welcome shake animation */
+@keyframes welcomeShake {
+  0% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(-2px);
+  }
+  20% {
+    transform: translateX(2px);
+  }
+  30% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  50% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.welcome-login button {
+  background: none;
+  color: blue;
+  border: none;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.welcome-login button:hover {
+  background: none;
+  color:red;
+  transform: translateY(-2px);
+}
+
 
 .form-welcome-message p {
   text-align: center;
