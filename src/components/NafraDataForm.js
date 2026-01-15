@@ -26,6 +26,7 @@ import DistrictViewModal from './DistrictViewModal';
 import DistrictEditModal from './DistrictEditModal';
 import DistrictDeleteModal from './DistrictDeleteModal';
 import logo from '../img/nafra-logo.png';
+import logo2 from '../img/logo3.png';
 import {
   DISTRICT_CHIEFDOMS,
   DISTRICT_OPTIONS,
@@ -815,22 +816,20 @@ export default function NafraDataForm() {
           <img className="form-logo" src={logo} alt="Logo" />
           <div className="header-text">
             <h1>National Fertilizer Regulatory Agency</h1>
-            <p>Data Portal</p>
+            <h1>&#40;Nafra&#41;</h1>
+            <p>Fertilizer Data Portal &#40;2025&#41; </p>
           </div>
+          <img className="form-logo" src={logo2} alt="Logo" />
         </div>
         <div className="nafra-form-input-body" style={{ minHeight: '100vh' }}>
           <hr />
           <div className="form-welcome-message">
             <div className="welcome-login">
               <h1>
-                Welcome
+                Welcome,
                 {' '}
-                <span className="organization-name">FSRP</span>
+                <span className="organization-name">Food Security Resilence Program &#40;FSRP&#41;</span>
               </h1>
-
-              <button type="button" onClick={handleLogout}>
-                Logout
-              </button>
             </div>
 
             <p>Please carefully fill out the form below to submit your data.</p>
@@ -876,10 +875,15 @@ export default function NafraDataForm() {
               ))}
             </ul>
           </div>
+          <div className="form-view-buttons">
+            <button className="submit-button" type="button">
+              submit
+            </button>
+            <button className="form-view-logout" type="button" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
 
-          <button className="submit-button" type="button">
-            submit
-          </button>
         </div>
       </div>
       {isModalOpen ? (
