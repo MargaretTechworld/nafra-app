@@ -14,15 +14,55 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
 }
 
 .district-view-modal .modal-header h2 {
   margin: 0;
-  color: #1f2937;
+  color: #333;
+}
+
+.district-view-modal .modal-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.district-view-modal .download-pdf-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.district-view-modal .download-pdf-btn:hover {
+  background-color: #218838;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
   font-size: 1.5rem;
-  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.district-view-modal .close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
 }
 
 .district-view-modal .modal-content {
@@ -46,12 +86,37 @@
   font-weight: 500;
 }
 
-.district-view-modal .chiefdom-card {
+.district-view-modal .district-card {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 16px;
+  margin-bottom: 20px;
+}
+
+.district-view-modal .district-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.district-view-modal .district-header h5 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.district-view-modal .chiefdom-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  margin-left: 16px;
 }
 
 .district-view-modal .chiefdom-header {
@@ -66,6 +131,15 @@
   color: #1f2937;
   font-size: 1rem;
   font-weight: 500;
+}
+
+.district-view-modal .chiefdom-header .district-name {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  background-color: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .district-view-modal .chiefdom-header .dealership {
@@ -83,12 +157,18 @@
 
 .district-view-modal .fertilizer-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
+  flex-direction: column;
+  padding: 12px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.district-view-modal .fertilizer-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 8px;
 }
 
@@ -96,6 +176,12 @@
   color: #1f2937;
   font-weight: 500;
   font-size: 0.875rem;
+}
+
+.district-view-modal .fertilizer-dealership {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-style: italic;
 }
 
 .district-view-modal .fertilizer-details {
@@ -131,18 +217,29 @@
   z-index: 1000;
 }
 
-.close-modal-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-}
-
 .close-modal-btn:hover {
   color: #374151;
+}
+
+.fertilizer-bag-sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.bag-size-info {
+  font-size: 0.875rem;
+  color: #4b5563;
+  padding: 4px 8px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.bag-size-info.no-bags {
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .primary-btn {
@@ -156,5 +253,5 @@
 }
 
 .primary-btn:hover {
-  background: #2563eb;
+  background: linear-gradient(120deg, #14bae9, #08915b);
 }

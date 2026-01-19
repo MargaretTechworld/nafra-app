@@ -1,19 +1,32 @@
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { deleteDistrict } from '../features/district/districtSlice';
+import { logout } from '../features/auth/authSlice';
 import './styles/DistrictDeleteModal.css';
 
 const DistrictDeleteModal = ({ district, onClose }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      dispatch(logout());
+      navigate('/login');
+    }
+  }, [isAuthenticated, dispatch, navigate]);
+
+  if (!isAuthenticated || !district) {
+    return null;
+  }
 
   const handleDelete = () => {
     dispatch(deleteDistrict(district.id));
     onClose();
   };
-
-  if (!district) {
-    return null;
-  }
 
   return (
     <div className="modal-overlay">
@@ -79,9 +92,15 @@ DistrictDeleteModal.propTypes = {
       PropTypes.shape({
         id: PropTypes.string,
         name: PropTypes.string,
+        customName: PropTypes.string,
         fertilizers: PropTypes.arrayOf(
           PropTypes.shape({
             id: PropTypes.string,
+            name: PropTypes.string,
+            customName: PropTypes.string,
+            dealership: PropTypes.string,
+            bagCount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            bagSize: PropTypes.string,
           }),
         ),
       }),
