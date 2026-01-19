@@ -6,6 +6,11 @@
   padding: 2%;
 }
 
+.btn-a-icon {
+  border: none;
+  background: none;
+}
+
 .form-logo {
   width: 100px;
 }
@@ -18,7 +23,197 @@
 .header-text h1 {
   margin: 0;
   font-size: 1.3rem;
+}
+
+/* Inline Logout Button */
+.form-view-logout-inline {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.form-view-logout-inline:hover {
+  background-color: #c82333;
+}
+
+/* Submissions View */
+.submission-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.submission-date {
+  font-weight: 500;
+  color: #333;
+}
+
+.submission-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.no-submissions {
   text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.submissions-footer {
+  padding: 10px;
+  text-align: left;
+}
+
+.back-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.back-btn:hover {
+  background-color: #5a6268;
+}
+
+/* Success Message */
+.success-message {
+  background-color: #28a745;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 500;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Confirmation Modal */
+.confirmation-modal {
+  background: white;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.confirmation-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.confirmation-modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.confirmation-modal-body {
+  padding: 20px;
+}
+
+.confirmation-modal-body p {
+  margin: 0 0 15px 0;
+  color: #666;
+}
+
+.submission-summary {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.submission-summary span {
+  font-weight: 500;
+  color: #333;
+}
+
+.confirmation-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+/* Button styles consolidated */
+.button {
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+/* Button styles consolidated */
+
+.view-submissions-btn {
+  background: linear-gradient(120deg, #08915b, #14bae9);
+  color: white;
+  border: none;
+  padding: 2px 3px;
+  margin-left: 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.view-submissions-btn:hover {
+  background-color: #5a6268;
+  padding: 3px 4px;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .header-text p {
@@ -31,6 +226,18 @@
   display: flex;
   flex-direction: column;
   padding: 0.3% 5%;
+}
+
+.login-prev {
+  border: none;
+  background: none;
+  color: #0056b3;
+  cursor: pointer;
+}
+
+.login-prev:hover {
+  color: red;
+  font-size: 16px;
 }
 
 .welcome-login {
@@ -117,6 +324,7 @@
 
 .nafra-form-input-fields {
   display: flex;
+  justify-content: space-between;
   gap: 10px;
   align-items: center;
   margin-top: 2%;
@@ -469,6 +677,7 @@
   flex-wrap: wrap;
 }
 
+/* Button styles */
 .secondary-btn,
 .primary-btn {
   border-radius: 8px;
@@ -477,6 +686,7 @@
   border: none;
   cursor: pointer;
   font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .secondary-btn {
@@ -484,10 +694,20 @@
   color: #0f172a;
 }
 
+.secondary-btn:hover {
+  background: rgba(17, 24, 39, 0.15);
+}
+
 .primary-btn {
   background: linear-gradient(120deg, #08915b, #14bae9);
   color: #fff;
   box-shadow: 0 10px 20px rgba(8, 145, 91, 0.25);
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(8, 145, 91, 0.3);
 }
 
 .modal-error {
@@ -597,6 +817,51 @@
 
   .header-text h1 {
     font-size: 0.95rem;
+  }
+
+  /* Bag Sizes Section Styling */
+  .bag-sizes-section {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  .bag-sizes-section h6 {
+    margin: 0 0 12px 0;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .bag-size-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+  }
+
+  .bag-size-row .form-field {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .add-bag-size-btn {
+    margin-top: 12px;
+    width: 100%;
+    justify-content: center;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .add-bag-size-btn:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
   }
 
   .welcome-login h1 {

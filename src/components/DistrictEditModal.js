@@ -1,13 +1,15 @@
-/* eslint-disable jsx-a11y/label-has-associated-control */
 import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { updateDistrict } from '../features/district/districtSlice';
+import { logout } from '../features/auth/authSlice';
 import './styles/DistrictEditModal.css';
 
 const DistrictEditModal = ({ district, onClose }) => {
   const dispatch = useDispatch();
-
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     name: '',
     chiefdoms: [],
@@ -17,12 +19,32 @@ const DistrictEditModal = ({ district, onClose }) => {
 
   useEffect(() => {
     if (district) {
+      const updatedChiefdoms = (district.chiefdoms || []).map((chiefdom) => ({
+        ...chiefdom,
+        fertilizers: (chiefdom.fertilizers || []).map((fertilizer) => ({
+          ...fertilizer,
+          bag25kg: fertilizer.bag25kg || (fertilizer.bagSize === '25' ? fertilizer.bagCount : ''),
+          bag50kg: fertilizer.bag50kg || (fertilizer.bagSize === '50' ? fertilizer.bagCount : ''),
+        })),
+      }));
+
       setFormData({
         name: district.name,
-        chiefdoms: district.chiefdoms || [],
+        chiefdoms: updatedChiefdoms,
       });
     }
   }, [district]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      dispatch(logout());
+      navigate('/login');
+    }
+  }, [isAuthenticated, dispatch, navigate]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleChiefdomChange = (chiefdomId, field, value) => {
     setFormData((prev) => {
@@ -33,10 +55,8 @@ const DistrictEditModal = ({ district, onClose }) => {
             [field]: value,
           };
         }
-
         return chiefdom;
       });
-
       return {
         ...prev,
         chiefdoms: updatedChiefdoms,
@@ -58,7 +78,6 @@ const DistrictEditModal = ({ district, onClose }) => {
               [field]: value,
             };
           }
-
           return fertilizer;
         });
 
@@ -77,31 +96,52 @@ const DistrictEditModal = ({ district, onClose }) => {
 
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.name.trim()) {
       newErrors.name = 'District name is required';
     }
 
     formData.chiefdoms.forEach((chiefdom) => {
       const chiefdomName = chiefdom.name || chiefdom.customName;
-
       if (!chiefdomName || !chiefdomName.trim()) {
         newErrors[`chiefdom_${chiefdom.id}`] = 'Chiefdom name is required';
       }
 
-      if (!chiefdom.dealership || !chiefdom.dealership.trim()) {
-        newErrors[`dealership_${chiefdom.id}`] = 'Dealership is required';
-      }
-
       chiefdom.fertilizers.forEach((fertilizer) => {
         const fertilizerName = fertilizer.name || fertilizer.customName;
-
         if (!fertilizerName || !fertilizerName.trim()) {
           newErrors[`fertilizer_${fertilizer.id}`] = 'Fertilizer name is required';
         }
+        if (!fertilizer.dealership || !fertilizer.dealership.trim()) {
+          newErrors[`dealership_${fertilizer.id}`] = 'Dealership is required';
+        }
 
-        if (!Number(fertilizer.bagCount) || Number(fertilizer.bagCount) <= 0) {
-          newErrors[`bags_${fertilizer.id}`] = 'Valid bag count is required';
+        // Check if 25kg bags have a valid count
+        const has25kg = fertilizer.bag25kg
+          && String(fertilizer.bag25kg).trim()
+          && Number(fertilizer.bag25kg) > 0;
+        // Check if 50kg bags have a valid count
+        const has50kg = fertilizer.bag50kg
+          && String(fertilizer.bag50kg).trim()
+          && Number(fertilizer.bag50kg) > 0;
+
+        if (!has25kg && !has50kg) {
+          newErrors[`bagSizes_${fertilizer.id}`] = 'At least one bag size (25kg or 50kg) must be specified.';
+        } else {
+          delete newErrors[`bagSizes_${fertilizer.id}`];
+        }
+
+        // Validate 25kg bag count
+        if (fertilizer.bag25kg
+            && String(fertilizer.bag25kg).trim()
+            && Number(fertilizer.bag25kg) <= 0) {
+          newErrors[`bag25kg_${fertilizer.id}`] = 'Enter valid bag count for 25kg bags.';
+        }
+
+        // Validate 50kg bag count
+        if (fertilizer.bag50kg
+            && String(fertilizer.bag50kg).trim()
+            && Number(fertilizer.bag50kg) <= 0) {
+          newErrors[`bag50kg_${fertilizer.id}`] = 'Enter valid bag count for 50kg bags.';
         }
       });
     });
@@ -112,7 +152,40 @@ const DistrictEditModal = ({ district, onClose }) => {
 
   const handleSave = () => {
     if (validateForm()) {
-      dispatch(updateDistrict({ id: district.id, updatedData: formData }));
+      const preparedData = {
+        ...formData,
+        chiefdoms: formData.chiefdoms.map((chiefdom) => ({
+          ...chiefdom,
+          fertilizers: chiefdom.fertilizers
+            .map((fertilizer) => {
+              const fName = fertilizer.name || fertilizer.customName;
+              if (!fName) {
+                return null;
+              }
+
+              const entries = [];
+              if (fertilizer.bag25kg && Number(fertilizer.bag25kg) > 0) {
+                entries.push({
+                  ...fertilizer,
+                  bagSize: '25',
+                  bagCount: Number(fertilizer.bag25kg) || 0,
+                });
+              }
+              if (fertilizer.bag50kg && Number(fertilizer.bag50kg) > 0) {
+                entries.push({
+                  ...fertilizer,
+                  bagSize: '50',
+                  bagCount: Number(fertilizer.bag50kg) || 0,
+                });
+              }
+              return entries;
+            })
+            .flat()
+            .filter(Boolean),
+        })),
+      };
+
+      dispatch(updateDistrict({ id: district.id, updatedData: preparedData }));
       onClose();
     }
   };
@@ -133,22 +206,23 @@ const DistrictEditModal = ({ district, onClose }) => {
 
         <div className="modal-content">
           <div className="form-field">
-            <label id="district-name-label">District Name</label>
-            <input
-              id="district-name"
-              aria-labelledby="district-name-label"
-              type="text"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  name: e.target.value,
-                });
-              }}
-              className={errors.name ? 'error' : ''}
-            />
+            <label htmlFor="district-name">
+              District Name
+              <input
+                id="district-name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                }}
+                className={errors.name ? 'error' : ''}
+                aria-describedby={errors.name ? 'district-name-error' : undefined}
+              />
+            </label>
             {errors.name && (
-              <span className="error-message">{errors.name}</span>
+              <span id="district-name-error" className="error-message">
+                {errors.name}
+              </span>
             )}
           </div>
 
@@ -157,115 +231,173 @@ const DistrictEditModal = ({ district, onClose }) => {
               <h4>Chiefdom</h4>
 
               <div className="form-field">
-                <label id={`chiefdom-name-label-${chiefdom.id}`}>Name</label>
-                <input
-                  id={`chiefdom-name-${chiefdom.id}`}
-                  aria-labelledby={`chiefdom-name-label-${chiefdom.id}`}
-                  type="text"
-                  value={chiefdom.name || chiefdom.customName || ''}
-                  onChange={(e) => {
-                    handleChiefdomChange(
-                      chiefdom.id,
-                      'name',
-                      e.target.value,
-                    );
-                  }}
-                  className={
-                    errors[`chiefdom_${chiefdom.id}`] ? 'error' : ''
-                  }
-                />
+                <label htmlFor={`chiefdom-name-${chiefdom.id}`}>
+                  Name
+                  <input
+                    id={`chiefdom-name-${chiefdom.id}`}
+                    type="text"
+                    value={chiefdom.name || chiefdom.customName || ''}
+                    onChange={(e) => {
+                      handleChiefdomChange(chiefdom.id, 'name', e.target.value);
+                    }}
+                    className={errors[`chiefdom_${chiefdom.id}`] ? 'error' : ''}
+                  />
+                </label>
                 {errors[`chiefdom_${chiefdom.id}`] && (
-                  <span className="error-message">{errors[`chiefdom_${chiefdom.id}`]}</span>
+                  <span id={`chiefdom-error-${chiefdom.id}`} className="error-message">
+                    {errors[`chiefdom_${chiefdom.id}`]}
+                  </span>
                 )}
               </div>
 
-              <div className="form-field">
-                <label id={`dealership-label-${chiefdom.id}`}>Dealership</label>
-                <input
-                  id={`dealership-${chiefdom.id}`}
-                  aria-labelledby={`dealership-label-${chiefdom.id}`}
-                  type="text"
-                  value={chiefdom.dealership || ''}
-                  onChange={(e) => {
-                    handleChiefdomChange(
-                      chiefdom.id,
-                      'dealership',
-                      e.target.value,
-                    );
-                  }}
-                  className={
-                    errors[`dealership_${chiefdom.id}`] ? 'error' : ''
-                  }
-                />
-                {errors[`dealership_${chiefdom.id}`] && (
-                  <span className="error-message">{errors[`dealership_${chiefdom.id}`]}</span>
-                )}
+              <div className="fertilizer-list">
+                {(() => {
+                  const groupedFertilizers = chiefdom.fertilizers.reduce((acc, fertilizer) => {
+                    const name = fertilizer.name || fertilizer.customName || '';
+                    const dealership = fertilizer.dealership || '';
+                    const key = `${name}-${dealership}`;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        name: fertilizer.name || fertilizer.customName,
+                        dealership: fertilizer.dealership,
+                        bag25kg: 0,
+                        bag50kg: 0,
+                        originalFertilizers: [],
+                      };
+                    }
+
+                    if (fertilizer.bagSize === '25') {
+                      acc[key].bag25kg += Number(fertilizer.bagCount) || 0;
+                    } else if (fertilizer.bagSize === '50') {
+                      acc[key].bag50kg += Number(fertilizer.bagCount) || 0;
+                    }
+
+                    if (fertilizer.bag25kg) {
+                      acc[key].bag25kg += Number(fertilizer.bag25kg) || 0;
+                    }
+                    if (fertilizer.bag50kg) {
+                      acc[key].bag50kg += Number(fertilizer.bag50kg) || 0;
+                    }
+
+                    acc[key].originalFertilizers.push(fertilizer);
+                    return acc;
+                  }, {});
+
+                  return Object.entries(groupedFertilizers).map(([key, groupedFert]) => (
+                    <div key={key} className="fertilizer-edit-item">
+                      <div className="form-field">
+                        <label htmlFor={`fertilizer-${groupedFert.originalFertilizers[0]?.id}`}>
+                          Fertilizer Name
+                          <input
+                            id={`fertilizer-${groupedFert.originalFertilizers[0]?.id}`}
+                            type="text"
+                            value={groupedFert.name || ''}
+                            onChange={(e) => {
+                              groupedFert.originalFertilizers.forEach((fert) => {
+                                handleFertilizerChange(chiefdom.id, fert.id, 'name', e.target.value);
+                              });
+                            }}
+                            className={errors[`fertilizer_${groupedFert.originalFertilizers[0]?.id}`] ? 'error' : ''}
+                            aria-describedby={errors[`fertilizer_${groupedFert.originalFertilizers[0]?.id}`] ? `fertilizer-error-${groupedFert.originalFertilizers[0]?.id}` : undefined}
+                          />
+                        </label>
+                        {errors[`fertilizer_${groupedFert.originalFertilizers[0]?.id}`] && (
+                          <span id={`fertilizer-error-${groupedFert.originalFertilizers[0]?.id}`} className="error-message">
+                            {errors[`fertilizer_${groupedFert.originalFertilizers[0]?.id}`]}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="form-field">
+                        <label htmlFor={`dealership-${groupedFert.originalFertilizers[0]?.id}`}>
+                          Dealership
+                          <input
+                            id={`dealership-${groupedFert.originalFertilizers[0]?.id}`}
+                            type="text"
+                            value={groupedFert.dealership || ''}
+                            onChange={(e) => {
+                              groupedFert.originalFertilizers.forEach((fert) => {
+                                handleFertilizerChange(chiefdom.id, fert.id, 'dealership', e.target.value);
+                              });
+                            }}
+                            className={errors[`dealership_${groupedFert.originalFertilizers[0]?.id}`] ? 'error' : ''}
+                            aria-describedby={errors[`dealership_${groupedFert.originalFertilizers[0]?.id}`] ? `dealership-error-${groupedFert.originalFertilizers[0]?.id}` : undefined}
+                          />
+                        </label>
+                        {errors[`dealership_${groupedFert.originalFertilizers[0]?.id}`] && (
+                          <span id={`dealership-error-${groupedFert.originalFertilizers[0]?.id}`} className="error-message">
+                            {errors[`dealership_${groupedFert.originalFertilizers[0]?.id}`]}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="bag-sizes-section">
+                        <h6>Bag Sizes</h6>
+                        <div className="bag-size-row">
+                          <div className="form-field">
+                            <label htmlFor={`bag-25kg-${groupedFert.originalFertilizers[0]?.id}`}>
+                              25kg Bags
+                              <input
+                                id={`bag-25kg-${groupedFert.originalFertilizers[0]?.id}`}
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={groupedFert.bag25kg || ''}
+                                onChange={(e) => {
+                                  groupedFert.originalFertilizers.forEach((fert) => {
+                                    handleFertilizerChange(chiefdom.id, fert.id, 'bag25kg', e.target.value);
+                                  });
+                                }}
+                                className={errors[`bag25kg_${groupedFert.originalFertilizers[0]?.id}`] ? 'error' : ''}
+                                aria-describedby={errors[`bag25kg_${groupedFert.originalFertilizers[0]?.id}`] ? `bag25kg-error-${groupedFert.originalFertilizers[0]?.id}` : undefined}
+                              />
+                            </label>
+                            {errors[`bag25kg_${groupedFert.originalFertilizers[0]?.id}`] && (
+                              <span id={`bag25kg-error-${groupedFert.originalFertilizers[0]?.id}`} className="error-message">
+                                {errors[`bag25kg_${groupedFert.originalFertilizers[0]?.id}`]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bag-size-row">
+                          <div className="form-field">
+                            <label htmlFor={`bag-50kg-${groupedFert.originalFertilizers[0]?.id}`}>
+                              50kg Bags
+                              <input
+                                id={`bag-50kg-${groupedFert.originalFertilizers[0]?.id}`}
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={groupedFert.bag50kg || ''}
+                                onChange={(e) => {
+                                  groupedFert.originalFertilizers.forEach((fert) => {
+                                    handleFertilizerChange(chiefdom.id, fert.id, 'bag50kg', e.target.value);
+                                  });
+                                }}
+                                className={errors[`bag50kg_${groupedFert.originalFertilizers[0]?.id}`] ? 'error' : ''}
+                                aria-describedby={errors[`bag50kg_${groupedFert.originalFertilizers[0]?.id}`] ? `bag50kg-error-${groupedFert.originalFertilizers[0]?.id}` : undefined}
+                              />
+                            </label>
+                            {errors[`bag50kg_${groupedFert.originalFertilizers[0]?.id}`] && (
+                              <span id={`bag50kg-error-${groupedFert.originalFertilizers[0]?.id}`} className="error-message">
+                                {errors[`bag50kg_${groupedFert.originalFertilizers[0]?.id}`]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {errors[`bagSizes_${groupedFert.originalFertilizers[0]?.id}`] && (
+                        <span id={`bagsizes-error-${groupedFert.originalFertilizers[0]?.id}`} className="error-message">
+                          {errors[`bagSizes_${groupedFert.originalFertilizers[0]?.id}`]}
+                        </span>
+                      )}
+                    </div>
+                  ));
+                })()}
               </div>
-
-              {chiefdom.fertilizers.map((fertilizer) => (
-                <div key={fertilizer.id} className="fertilizer-edit-item">
-                  <div className="form-field">
-                    <label id={`fertilizer-label-${fertilizer.id}`}>
-                      Fertilizer Name
-                    </label>
-                    <input
-                      id={`fertilizer-${fertilizer.id}`}
-                      aria-labelledby={`fertilizer-label-${fertilizer.id}`}
-                      type="text"
-                      value={
-                        fertilizer.name
-                        || fertilizer.customName
-                        || ''
-                      }
-                      onChange={(e) => {
-                        handleFertilizerChange(
-                          chiefdom.id,
-                          fertilizer.id,
-                          'name',
-                          e.target.value,
-                        );
-                      }}
-                      className={
-                        errors[`fertilizer_${fertilizer.id}`]
-                          ? 'error'
-                          : ''
-                      }
-                    />
-                    {errors[`fertilizer_${fertilizer.id}`] && (
-                      <span className="error-message">{errors[`fertilizer_${fertilizer.id}`]}</span>
-                    )}
-                  </div>
-
-                  <div className="form-field">
-                    <label id={`bags-label-${fertilizer.id}`}>Bag Count</label>
-                    <input
-                      id={`bags-${fertilizer.id}`}
-                      aria-labelledby={`bags-label-${fertilizer.id}`}
-                      type="number"
-                      min="0"
-                      value={fertilizer.bagCount || ''}
-                      onChange={(e) => {
-                        handleFertilizerChange(
-                          chiefdom.id,
-                          fertilizer.id,
-                          'bagCount',
-                          e.target.value,
-                        );
-                      }}
-                      className={
-                        errors[`bags_${fertilizer.id}`]
-                          ? 'error'
-                          : ''
-                      }
-                    />
-                    {errors[`bags_${fertilizer.id}`] && (
-                      <span className="error-message">{errors[`bags_${fertilizer.id}`]}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
             </div>
           ))}
+
         </div>
 
         <div className="modal-footer">
@@ -290,13 +422,14 @@ DistrictEditModal.propTypes = {
         id: PropTypes.string.isRequired,
         name: PropTypes.string,
         customName: PropTypes.string,
-        dealership: PropTypes.string,
         fertilizers: PropTypes.arrayOf(
           PropTypes.shape({
             id: PropTypes.string.isRequired,
             name: PropTypes.string,
             customName: PropTypes.string,
+            dealership: PropTypes.string,
             bagCount: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+            bagSize: PropTypes.string,
           }),
         ).isRequired,
       }),

@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import './styles/NafraDataForm.css';
@@ -88,12 +88,13 @@ const normalizeText = (value = '') => value.trim().toLowerCase();
 
 const crFertValSt = () => ({
   name: '',
-  bagCount: '',
+  dealership: '',
+  bag25kg: '',
+  bag50kg: '',
 });
 
 const crChfValSt = (fertilizers = []) => ({
   name: '',
-  dealership: '',
   fertilizers: fertilizers.reduce((acc, fertilizer) => {
     acc[fertilizer.id] = crFertValSt();
     return acc;
@@ -178,8 +179,9 @@ const createFertilizerEntry = () => ({
   name: '',
   useCustomName: false,
   customName: '',
-  bagSize: '25',
-  bagCount: '',
+  dealership: '',
+  bag25kg: '',
+  bag50kg: '',
 });
 
 const createChiefdomEntry = () => {
@@ -190,7 +192,6 @@ const createChiefdomEntry = () => {
     useCustomName: false,
     customName: '',
     fertilizers: [initialFertilizer],
-    dealership: '',
     isCollapsed: false,
     validationErrors: crChfValSt([initialFertilizer]),
   };
@@ -241,29 +242,61 @@ const hasDuplicatefertName = (fertilizers, targetId, candidateName) => {
 };
 
 const getChiefdomFertilizerSummary = (chiefdom) => {
-  if (!chiefdom?.fertilizers?.length) {
-    return 'No fertilizer entries yet';
+  if (!chiefdom.fertilizers || chiefdom.fertilizers.length === 0) {
+    return 'No fertilizers added';
   }
 
-  const summary = chiefdom.fertilizers
-    .map((fertilizer) => {
-      const label = fertilizer.useCustomName ? fertilizer.customName.trim() : fertilizer.name;
-      if (!label) {
-        return null;
+  const summary = [];
+  const fertilizerMap = new Map();
+
+  // Group fertilizers by name and dealership
+  chiefdom.fertilizers.forEach((fertilizer) => {
+    const key = `${fertilizer.name || fertilizer.customName}-${fertilizer.dealership}`;
+    if (!fertilizerMap.has(key)) {
+      fertilizerMap.set(key, {
+        name: fertilizer.name || fertilizer.customName,
+        dealership: fertilizer.dealership,
+        bag25kg: 0,
+        bag50kg: 0,
+      });
+    }
+    const current = fertilizerMap.get(key);
+
+    // Handle both old and new data formats
+    if (fertilizer.bagSize && fertilizer.bagCount) {
+      // Convert old format to new format
+      const count = Number(fertilizer.bagCount) || 0;
+      if (fertilizer.bagSize === '25') {
+        current.bag25kg += count;
+      } else if (fertilizer.bagSize === '50') {
+        current.bag50kg += count;
       }
-      const bagCount = Number(fertilizer.bagCount) || 0;
-      const bagText = bagCount
-        ? `${bagCount} x ${fertilizer.bagSize}kg`
-        : `${fertilizer.bagSize}kg`;
-      return `${label} (${bagText})`;
-    })
-    .filter(Boolean);
+    } else {
+      // New format
+      current.bag25kg += Number(fertilizer.bag25kg) || 0;
+      current.bag50kg += Number(fertilizer.bag50kg) || 0;
+    }
+  });
 
-  if (!summary.length) {
-    return 'No fertilizer entries yet';
-  }
+  // Generate summary strings
+  fertilizerMap.forEach((fertilizer) => {
+    const parts = [];
+    if (fertilizer.bag25kg > 0) {
+      parts.push(`${fertilizer.bag25kg} x 25kg`);
+    }
+    if (fertilizer.bag50kg > 0) {
+      parts.push(`${fertilizer.bag50kg} x 50kg`);
+    }
 
-  return summary.join(' • ');
+    const dealerInfo = fertilizer.dealership ? ` (${fertilizer.dealership})` : '';
+    if (parts.length > 0) {
+      summary.push(`${fertilizer.name}${dealerInfo}: ${parts.join(', ')}`);
+    } else {
+      summary.push(`${fertilizer.name}${dealerInfo}: No quantities specified`);
+    }
+  });
+
+  return summary.join('; ');
 };
 
 const validateChiefdomEntry = (chiefdom) => {
@@ -274,10 +307,6 @@ const validateChiefdomEntry = (chiefdom) => {
     errors.name = 'Select or enter a chiefdom name.';
   }
 
-  if (!chiefdom.dealership.trim()) {
-    errors.dealership = 'Enter the fertilizer dealership name.';
-  }
-
   chiefdom.fertilizers.forEach((fertilizer) => {
     const fertilizerErrors = errors.fertilizers[fertilizer.id]
       || crFertValSt();
@@ -285,20 +314,57 @@ const validateChiefdomEntry = (chiefdom) => {
     if (!fertName) {
       fertilizerErrors.name = 'Select or enter a fertilizer name.';
     }
-    const bagCountValue = Number(fertilizer.bagCount);
-    if (!Number.isFinite(bagCountValue) || bagCountValue <= 0) {
-      fertilizerErrors.bagCount = 'Enter a bag count greater than zero.';
+    if (!fertilizer.dealership.trim()) {
+      fertilizerErrors.dealership = 'Enter the fertilizer dealership name.';
     }
+
+    // Validate bag counts - at least one bag size must be filled with valid number
+    const has25kg = fertilizer.bag25kg
+      && fertilizer.bag25kg.trim()
+      && Number(fertilizer.bag25kg) > 0;
+    const has50kg = fertilizer.bag50kg
+      && fertilizer.bag50kg.trim()
+      && Number(fertilizer.bag50kg) > 0;
+
+    if (!has25kg && !has50kg) {
+      fertilizerErrors.bagSizes = 'At least one bag size (25kg or 50kg) must be specified.';
+    } else {
+      // Clear the combined error if at least one is valid
+      delete fertilizerErrors.bagSizes;
+    }
+
+    // Only validate individual fields if they have values
+    if (fertilizer.bag25kg && fertilizer.bag25kg.trim()
+        && Number(fertilizer.bag25kg) <= 0) {
+      fertilizerErrors.bag25kg = 'Enter valid bag count for 25kg bags.';
+    } else if (!fertilizer.bag25kg || !fertilizer.bag25kg.trim()) {
+      // Clear error if field is empty
+      delete fertilizerErrors.bag25kg;
+    }
+
+    if (fertilizer.bag50kg && fertilizer.bag50kg.trim()
+        && Number(fertilizer.bag50kg) <= 0) {
+      fertilizerErrors.bag50kg = 'Enter valid bag count for 50kg bags.';
+    } else if (!fertilizer.bag50kg || !fertilizer.bag50kg.trim()) {
+      // Clear error if field is empty
+      delete fertilizerErrors.bag50kg;
+    }
+
     errors.fertilizers[fertilizer.id] = fertilizerErrors;
   });
 
   const hasName = !errors.name;
-  const hasDealership = !errors.dealership;
   const allFertilizersValid = Object.values(errors.fertilizers).every(
-    (fertilizerErrors) => (!fertilizerErrors.name && !fertilizerErrors.bagCount),
+    (fertilizerErrors) => {
+      const hasName = !fertilizerErrors.name;
+      const hasDealership = !fertilizerErrors.dealership;
+      const hasValid25kg = !fertilizerErrors.bag25kg;
+      const hasValid50kg = !fertilizerErrors.bag50kg;
+      return hasName && hasDealership && hasValid25kg && hasValid50kg;
+    },
   );
 
-  return { isValid: hasName && hasDealership && allFertilizersValid, errors };
+  return { isValid: hasName && allFertilizersValid, errors };
 };
 
 const getDistrictLabel = (value, customValue) => {
@@ -323,6 +389,12 @@ export default function NafraDataForm() {
     editModalDistrict,
     deleteModalDistrict,
   } = districtState;
+
+  // State for submissions view and confirmation modal
+  const [showSubmissions, setShowSubmissions] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [previousSubmissions, setPreviousSubmissions] = useState([]);
 
   useEffect(() => {
     // Initialize districts from localStorage on component mount
@@ -362,14 +434,12 @@ export default function NafraDataForm() {
         (totals, chiefdom) => {
           const chiefdomTotals = chiefdom.fertilizers.reduce(
             (acc, fertilizer) => {
-              const count = Number(fertilizer.bagCount) || 0;
-              if (fertilizer.bagSize === '25') {
-                return { ...acc, total25: acc.total25 + count };
-              }
-              if (fertilizer.bagSize === '50') {
-                return { ...acc, total50: acc.total50 + count };
-              }
-              return acc;
+              const bag25kgCount = Number(fertilizer.bag25kg) || 0;
+              const bag50kgCount = Number(fertilizer.bag50kg) || 0;
+              return {
+                total25: acc.total25 + bag25kgCount,
+                total50: acc.total50 + bag50kgCount,
+              };
             },
             { total25: 0, total50: 0 },
           );
@@ -627,8 +697,13 @@ export default function NafraDataForm() {
         const currentErrors = chiefdom.validationErrors
           || resetChiefdomValEr(chiefdom);
         let updatedErrors = currentErrors;
-        if (field === 'bagCount') {
-          updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'bagCount');
+
+        if (field === 'bag25kg') {
+          updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'bag25kg');
+        } else if (field === 'bag50kg') {
+          updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'bag50kg');
+        } else if (field === 'dealership') {
+          updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'dealership');
         } else if (field === 'customName') {
           const isDuplicate = hasDuplicatefertName(
             chiefdom.fertilizers,
@@ -641,6 +716,7 @@ export default function NafraDataForm() {
         } else if (field === 'name') {
           updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'name');
         }
+
         return {
           ...chiefdom,
           fertilizers: chiefdom.fertilizers.map((fertilizer) => {
@@ -769,17 +845,35 @@ export default function NafraDataForm() {
             if (!FName) {
               return null;
             }
-            return {
-              name: FName,
-              bagSize: fertilizer.bagSize,
-              bagCount: Number(fertilizer.bagCount) || 0,
-            };
+
+            // Create entries for each bag size with count > 0
+            const entries = [];
+
+            if (fertilizer.bag25kg && Number(fertilizer.bag25kg) > 0) {
+              entries.push({
+                name: FName,
+                dealership: fertilizer.dealership.trim(),
+                bagSize: '25',
+                bagCount: Number(fertilizer.bag25kg) || 0,
+              });
+            }
+
+            if (fertilizer.bag50kg && Number(fertilizer.bag50kg) > 0) {
+              entries.push({
+                name: FName,
+                dealership: fertilizer.dealership.trim(),
+                bagSize: '50',
+                bagCount: Number(fertilizer.bag50kg) || 0,
+              });
+            }
+
+            return entries;
           })
+          .flat() // Flatten the array of entries
           .filter(Boolean);
 
         return {
           name: chiefdomName,
-          dealership: chiefdom.dealership.trim(),
           fertilizers,
         };
       })
@@ -809,6 +903,108 @@ export default function NafraDataForm() {
     navigate('/login');
   };
 
+  // Handler for View Previous Submissions
+  const handleViewSubmissions = () => {
+    // Load previous submissions from localStorage or API
+    try {
+      const savedSubmissions = window.localStorage.getItem('nafra-submissions');
+      if (savedSubmissions) {
+        const submissions = JSON.parse(savedSubmissions);
+        // Sort by submission date (newest first) and filter by current user
+        // Sort submissions by date (newest first)
+        const sortedSubmissions = submissions.sort(
+          (a, b) => new Date(b.submissionDate) - new Date(a.submissionDate),
+        );
+        setPreviousSubmissions(sortedSubmissions);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to load previous submissions', error);
+    }
+    setShowSubmissions(true);
+  };
+
+  // Handler for Submit button
+  const handleSubmit = () => {
+    if (districts.length === 0) {
+      dispatch(setFormError('Please add at least one district before submitting.'));
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  // Handler for confirming submission
+  const handleConfirmSubmission = () => {
+    setShowConfirmModal(false);
+
+    // Prepare submission data
+    const submissionData = {
+      id: uniqueId('submission'),
+      userId: 'current-user-id', // Replace with actual user ID from auth state
+      submissionDate: new Date().toISOString(),
+      districts, // Store original district structure with bag25kg/bag50kg fields
+      totals: bagTotals,
+    };
+
+    // Save to localStorage (replace with actual database call)
+    try {
+      const existingSubmissions = window.localStorage.getItem('nafra-submissions');
+      const submissions = existingSubmissions ? JSON.parse(existingSubmissions) : [];
+      submissions.push(submissionData);
+      window.localStorage.setItem('nafra-submissions', JSON.stringify(submissions));
+
+      // Clear current districts
+      dispatch(setDistricts([]));
+
+      // Show success message
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+
+      // Hide submissions view and show empty state
+      setShowSubmissions(false);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error saving submission:', error);
+      dispatch(setFormError('Failed to save submission. Please try again.'));
+    }
+  };
+
+  // Handler to cancel submission
+  const handleCancelSubmission = () => {
+    setShowConfirmModal(false);
+  };
+
+  // Handler to go back from submissions view
+  const handleBackToForm = () => {
+    setShowSubmissions(false);
+  };
+
+  // Handler for viewing submission data
+  const handleViewSubmission = (submission) => {
+    // Create a proper structure that shows districts as groups
+    const districtForView = {
+      id: submission.id,
+      name: `Submission from ${new Date(submission.submissionDate).toLocaleDateString()}`,
+      districts: submission.districts.map((district) => ({
+        ...district,
+        chiefdoms: district.chiefdoms.map((chiefdom) => ({
+          ...chiefdom,
+          fertilizers: chiefdom.fertilizers.map((fertilizer) => ({
+            ...fertilizer,
+            // Ensure bag25kg and bag50kg are properly set
+            bag25kg: fertilizer.bag25kg || 0,
+            bag50kg: fertilizer.bag50kg || 0,
+          })),
+        })),
+      })),
+      chiefdoms: [], // Empty chiefdoms array since we'll use districts
+      totals: submission.totals,
+      isSubmission: true, // Flag to indicate this is a submission
+      submissionDate: submission.submissionDate,
+    };
+    dispatch(openViewModal(districtForView));
+  };
+
   return (
     <div className="nafra-data-form">
       <div className="form-content">
@@ -834,54 +1030,119 @@ export default function NafraDataForm() {
 
             <p>Please carefully fill out the form below to submit your data.</p>
           </div>
-
+          {/* Success Message */}
+          {showSuccessMessage && (
+            <div className="success-message">
+              ✓ Data submitted successfully!
+            </div>
+          )}
           <div className="nafra-form-input-fields">
-            <p>Add District of Operation</p>
-            <button className="add-row-btn" type="button" onClick={handleOpenModal}>+ Add District</button>
+            {!showSubmissions && <p>Add District of Operation</p>}
+            {!showSubmissions && (
+              <button className="add-row-btn" type="button" onClick={handleOpenModal}>+ Add District</button>
+            )}
+            <button className="view-submissions-btn" type="button" onClick={showSubmissions ? handleBackToForm : handleViewSubmissions}>
+              {showSubmissions ? '← Back to Form' : 'View Previous Submissions'}
+            </button>
+            {showSubmissions && (
+              <button className="login-prev" type="button" onClick={handleLogout}>
+                Logout
+              </button>
+            )}
           </div>
           <div className="nafra-form-data-collected">
-            <div className="nafra-form-data-collected-header">
-              <span>District Added</span>
-              <span className="actions-title">Actions</span>
-            </div>
-
-            <ul
-              className="nafra-form-data-collected-body"
-              style={
-                districts.length > MAX_VISIBLE_DISTRICTS
-                  ? {
-                    maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
-                    overflowY: 'auto',
-                    paddingRight: '4px',
+            {showSubmissions ? (
+              <>
+                <div className="nafra-form-data-collected-header">
+                  <span>Previous Submissions</span>
+                  <span className="actions-title">Actions</span>
+                </div>
+                <ul
+                  className="nafra-form-data-collected-body"
+                  style={
+                    previousSubmissions.length > MAX_VISIBLE_DISTRICTS
+                      ? {
+                        maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
+                        overflowY: 'auto',
+                        paddingRight: '4px',
+                      }
+                      : undefined
                   }
-                  : undefined
-              }
-            >
-              {districts.map((district) => (
-                <li key={district.id} className="district-row">
-                  <span className="district-name">{district.name}</span>
-                  <div className="district-actions">
-                    <button type="button" title="Edit" onClick={() => handleEditDistrict(district)}>
-                      <EditIcon className="edit-icon" />
-                    </button>
-                    <button type="button" title="Delete" onClick={() => handleDeleteDistrict(district)}>
-                      <DeleteIcon className="delete-icon" />
-                    </button>
-                    <button type="button" title="Preview" onClick={() => handleViewDistrict(district)}>
-                      <EyeIcon className="view-icon" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                >
+                  {previousSubmissions.length > 0 ? (
+                    previousSubmissions.map((submission) => (
+                      <li key={submission.id} className="submission-row">
+                        <span className="submission-date">
+                          Submitted on
+                          {' '}
+                          {new Date(submission.submissionDate).toLocaleDateString()}
+                        </span>
+                        <div className="submission-actions">
+                          <button
+                            className="btn-a-icon"
+                            type="button"
+                            title="View Submission"
+                            onClick={() => handleViewSubmission(submission)}
+                          >
+                            <EyeIcon className="view-icon" />
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="no-submissions">No previous submissions found</li>
+                  )}
+                </ul>
+              </>
+            ) : (
+              <>
+                <div className="nafra-form-data-collected-header">
+                  <span>District Added</span>
+                  <span className="actions-title">Actions</span>
+                </div>
+                <ul
+                  className="nafra-form-data-collected-body"
+                  style={
+                    districts.length > MAX_VISIBLE_DISTRICTS
+                      ? {
+                        maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
+                        overflowY: 'auto',
+                        paddingRight: '4px',
+                      }
+                      : undefined
+                  }
+                >
+                  {districts.map((district) => (
+                    <li key={district.id} className="district-row">
+                      <span className="district-name">{district.name}</span>
+                      <div className="district-actions">
+                        <button className="btn-a-icon" type="button" title="Edit" onClick={() => handleEditDistrict(district)}>
+                          <EditIcon className="edit-icon" />
+                        </button>
+                        <button className="btn-a-icon" type="button" title="Delete" onClick={() => handleDeleteDistrict(district)}>
+                          <DeleteIcon className="delete-icon" />
+                        </button>
+                        <button className="btn-a-icon" type="button" title="Preview" onClick={() => handleViewDistrict(district)}>
+                          <EyeIcon className="view-icon" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           <div className="form-view-buttons">
-            <button className="submit-button" type="button">
-              submit
-            </button>
-            <button className="form-view-logout" type="button" onClick={handleLogout}>
-              Logout
-            </button>
+            {!showSubmissions && (
+              <button className="submit-button" type="button" onClick={handleSubmit}>
+                Submit
+              </button>
+            )}
+            {!showSubmissions && (
+              <button className="form-view-logout" type="button" onClick={handleLogout}>
+                Logout
+              </button>
+            )}
           </div>
 
         </div>
@@ -957,7 +1218,6 @@ export default function NafraDataForm() {
                     const chiefdomOptions = DISTRICT_CHIEFDOMS[districtForm.district] || [];
                     const cdomEr = chiefdom.validationErrors || crChfValSt(chiefdom.fertilizers);
                     const chiefdomNameErrorId = `chiefdom-name-error-${chiefdom.id}`;
-                    const dealErrorId = `chiefdom-dealer-error-${chiefdom.id}`;
                     return (
                       <div key={chiefdom.id} className="chiefdom-card" aria-expanded={!chiefdom.isCollapsed}>
                         <div className="chiefdom-card-header">
@@ -992,11 +1252,6 @@ export default function NafraDataForm() {
                               <strong>Name:</strong>
                               {' '}
                               {getChiefdomDisplayName(chiefdom)}
-                            </p>
-                            <p>
-                              <strong>Dealership:</strong>
-                              {' '}
-                              {chiefdom.dealership || 'Not specified'}
                             </p>
                             <p>
                               <strong>Fertilizers:</strong>
@@ -1057,29 +1312,6 @@ export default function NafraDataForm() {
                               </div>
                             ) : null}
 
-                            <div className="form-field">
-                              <FormLabel
-                                htmlFor={`dealership-${chiefdom.id}`}
-                                label="Fertilizer Dealership Name"
-                              >
-                                <input
-                                  id={`dealership-${chiefdom.id}`}
-                                  type="text"
-                                  placeholder="e.g. Sunrise Agro Dealers"
-                                  value={chiefdom.dealership}
-                                  onChange={(event) => handleChiefdomFieldChange(
-                                    chiefdom.id,
-                                    'dealership',
-                                    event.target.value,
-                                  )}
-                                  aria-invalid={Boolean(cdomEr.dealership)}
-                                  aria-describedby={cdomEr.dealership ? dealErrorId : undefined}
-                                  required
-                                />
-                              </FormLabel>
-                              <FieldError id={dealErrorId} message={cdomEr.dealership} />
-                            </div>
-
                             <div className="chiefdom-card-subheader">
                               <h6>Fertilizer Information</h6>
                               <button
@@ -1094,7 +1326,6 @@ export default function NafraDataForm() {
                               {chiefdom.fertilizers.map((fertilizer) => {
                                 const ftEr = cdomEr.fertilizers[fertilizer.id] || crFertValSt();
                                 const FNameErrorId = `fert-name-error-${fertilizer.id}`;
-                                const bagCountErrorId = `fert-bags-error-${fertilizer.id}`;
                                 return (
                                   <div key={fertilizer.id} className="fertilizer-row">
                                     <div className="fertilizer-field">
@@ -1159,57 +1390,106 @@ export default function NafraDataForm() {
                                         </div>
                                       ) : null}
                                     </div>
-                                    <div className="fertilizer-field-inline">
-                                      <div className="form-field">
-                                        <FormLabel
-                                          htmlFor={`bag-size-${fertilizer.id}`}
-                                          label="Bag Size (kg)"
-                                        >
-                                          <select
-                                            id={`bag-size-${fertilizer.id}`}
-                                            value={fertilizer.bagSize}
-                                            onChange={(event) => handleFertilizerFieldChange(
-                                              chiefdom.id,
-                                              fertilizer.id,
-                                              'bagSize',
-                                              event.target.value,
-                                            )}
-                                          >
-                                            <option value="25">25 kg</option>
-                                            <option value="50">50 kg</option>
-                                          </select>
-                                        </FormLabel>
-                                      </div>
-                                      <div className="form-field">
-                                        <FormLabel
-                                          htmlFor={`bag-count-${fertilizer.id}`}
-                                          label="Number of Bags"
-                                        >
-                                          <input
-                                            id={`bag-count-${fertilizer.id}`}
-                                            type="number"
-                                            min="0"
-                                            value={fertilizer.bagCount}
-                                            onChange={(event) => handleFertilizerFieldChange(
-                                              chiefdom.id,
-                                              fertilizer.id,
-                                              'bagCount',
-                                              event.target.value,
-                                            )}
-                                            aria-invalid={Boolean(ftEr.bagCount)}
-                                            aria-describedby={
-                                              ftEr.bagCount
-                                                ? bagCountErrorId
-                                                : undefined
-                                            }
-                                            required
-                                          />
-                                        </FormLabel>
-                                        <FieldError
-                                          id={bagCountErrorId}
-                                          message={ftEr.bagCount}
+                                    <div className="form-field">
+                                      <FormLabel
+                                        htmlFor={`dealership-${fertilizer.id}`}
+                                        label="Fertilizer Dealership Name"
+                                      >
+                                        <input
+                                          id={`dealership-${fertilizer.id}`}
+                                          type="text"
+                                          placeholder="e.g. Sunrise Agro Dealers"
+                                          value={fertilizer.dealership}
+                                          onChange={(event) => handleFertilizerFieldChange(
+                                            chiefdom.id,
+                                            fertilizer.id,
+                                            'dealership',
+                                            event.target.value,
+                                          )}
+                                          aria-invalid={Boolean(ftEr.dealership)}
+                                          aria-describedby={ftEr.dealership ? `dealership-error-${fertilizer.id}` : undefined}
+                                          required
                                         />
+                                      </FormLabel>
+                                      <FieldError
+                                        id={`dealership-error-${fertilizer.id}`}
+                                        message={ftEr.dealership}
+                                      />
+                                    </div>
+                                    <div className="bag-sizes-section">
+                                      <h6>Bag Sizes</h6>
+                                      <div className="bag-size-row">
+                                        <div className="form-field">
+                                          <FormLabel
+                                            htmlFor={`bag-25kg-${fertilizer.id}`}
+                                            label="25kg Bags"
+                                          >
+                                            <input
+                                              id={`bag-25kg-${fertilizer.id}`}
+                                              type="number"
+                                              min="0"
+                                              placeholder="0"
+                                              value={fertilizer.bag25kg || ''}
+                                              onChange={(event) => handleFertilizerFieldChange(
+                                                chiefdom.id,
+                                                fertilizer.id,
+                                                'bag25kg',
+                                                event.target.value,
+                                              )}
+                                              aria-invalid={Boolean(ftEr.bag25kg)}
+                                              aria-describedby={
+                                                ftEr.bag25kg
+                                                  ? `bag-25kg-error-${fertilizer.id}`
+                                                  : undefined
+                                              }
+                                              required
+                                            />
+                                          </FormLabel>
+                                          <FieldError
+                                            id={`bag-25kg-error-${fertilizer.id}`}
+                                            message={ftEr.bag25kg}
+                                          />
+                                        </div>
                                       </div>
+                                      <div className="bag-size-row">
+                                        <div className="form-field">
+                                          <FormLabel
+                                            htmlFor={`bag-50kg-${fertilizer.id}`}
+                                            label="50kg Bags"
+                                          >
+                                            <input
+                                              id={`bag-50kg-${fertilizer.id}`}
+                                              type="number"
+                                              min="0"
+                                              placeholder="0"
+                                              value={fertilizer.bag50kg || ''}
+                                              onChange={(event) => handleFertilizerFieldChange(
+                                                chiefdom.id,
+                                                fertilizer.id,
+                                                'bag50kg',
+                                                event.target.value,
+                                              )}
+                                              aria-invalid={Boolean(ftEr.bag50kg)}
+                                              aria-describedby={
+                                                ftEr.bag50kg
+                                                  ? `bag-50kg-error-${fertilizer.id}`
+                                                  : undefined
+                                              }
+                                              required
+                                            />
+                                          </FormLabel>
+                                          <FieldError
+                                            id={`bag-50kg-error-${fertilizer.id}`}
+                                            message={ftEr.bag50kg}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <FieldError
+                                      id={`bag-sizes-error-${fertilizer.id}`}
+                                      message={ftEr.bagSizes}
+                                    />
+                                    <>
                                       {chiefdom.fertilizers.length > 1 ? (
                                         <button
                                           type="button"
@@ -1219,7 +1499,7 @@ export default function NafraDataForm() {
                                           Remove
                                         </button>
                                       ) : null}
-                                    </div>
+                                    </>
                                   </div>
                                 );
                               })}
@@ -1279,6 +1559,50 @@ export default function NafraDataForm() {
           district={deleteModalDistrict}
           onClose={handleCloseDeleteModal}
         />
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="confirmation-modal">
+            <div className="confirmation-modal-header">
+              <h3>Confirm Submission</h3>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={handleCancelSubmission}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+            <div className="confirmation-modal-body">
+              <p>Are you sure you want to submit the collected data?</p>
+              <p>
+                This will submit
+                {districts.length}
+                {' '}
+                district(s)
+              </p>
+            </div>
+            <div className="confirmation-modal-footer">
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={handleCancelSubmission}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleConfirmSubmission}
+              >
+                Confirm Submit
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
