@@ -1,49 +1,107 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const DUMMY_USER = {
-  email: 'admin@nafra.gov',
-  password: 'password123',
-  name: 'NaFRA Administrator',
-  agency: 'NaFRA',
+// Validate JWT token
+const isTokenValid = (token) => {
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Date.now() / 1000;
+    return payload.exp > currentTime;
+  } catch (error) {
+    return false;
+  }
 };
 
-const initialState = {
-  user: null,
-  isAuthenticated: false,
-  error: null,
+// Load initial state from localStorage
+const loadAuthState = () => {
+  try {
+    const serializedState = localStorage.getItem('authState');
+
+    if (serializedState === null) {
+      return {
+        user: null,
+        token: null,
+        role: null,
+        userId: null,
+        isAuthenticated: false,
+      };
+    }
+    const parsedState = JSON.parse(serializedState);
+
+    // Check if token is still valid
+    if (parsedState.token && !isTokenValid(parsedState.token)) {
+      // Token expired, clear localStorage and return initial state
+      localStorage.removeItem('authState');
+      return {
+        user: null,
+        token: null,
+        role: null,
+        userId: null,
+        isAuthenticated: false,
+      };
+    }
+
+    const finalState = {
+      ...parsedState,
+      isAuthenticated: !!parsedState.token,
+    };
+    return finalState;
+  } catch (error) {
+    // Clear corrupted data
+    localStorage.removeItem('authState');
+    return {
+      user: null,
+      token: null,
+      role: null,
+      userId: null,
+      isAuthenticated: false,
+    };
+  }
+};
+
+// Save auth state to localStorage
+const saveAuthState = (state) => {
+  try {
+    const serializedState = JSON.stringify({
+      user: state.user,
+      token: state.token,
+      role: state.role,
+      userId: state.userId,
+    });
+    localStorage.setItem('authState', serializedState);
+  } catch (error) {
+    // Ignore write errors
+  }
 };
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState,
+  initialState: loadAuthState(),
   reducers: {
-    login(state, action) {
-      const { email, password } = action.payload;
-      const normalizedEmail = email?.trim().toLowerCase();
-      const isValidUser = normalizedEmail === DUMMY_USER.email && password === DUMMY_USER.password;
-
-      if (isValidUser) {
-        state.isAuthenticated = true;
-        state.user = {
-          name: DUMMY_USER.name,
-          email: DUMMY_USER.email,
-          agency: DUMMY_USER.agency,
-        };
-        state.error = null;
-      } else {
-        state.isAuthenticated = false;
-        state.user = null;
-        state.error = 'Invalid email or password. Please try again.';
-      }
+    setCredentials: (state, action) => {
+      const {
+        token, role, userId, user,
+      } = action.payload;
+      state.token = token;
+      state.role = role;
+      state.userId = userId;
+      state.user = user;
+      state.isAuthenticated = !!token;
+      // Save to localStorage
+      saveAuthState(state);
     },
-    logout(state) {
-      state.isAuthenticated = false;
+    logOut: (state) => {
+      state.token = null;
+      state.role = null;
+      state.userId = null;
       state.user = null;
-      state.error = null;
+      state.isAuthenticated = false;
+      // Clear localStorage
+      localStorage.removeItem('authState');
     },
   },
 });
 
-export const { login, logout } = authSlice.actions;
-
+export const { setCredentials, logOut } = authSlice.actions;
 export default authSlice.reducer;

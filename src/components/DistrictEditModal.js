@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { updateDistrict } from '../features/district/districtSlice';
-import { logout } from '../features/auth/authSlice';
+import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictEditModal.css';
 
 const DistrictEditModal = ({ district, onClose }) => {
@@ -37,7 +37,7 @@ const DistrictEditModal = ({ district, onClose }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      dispatch(logout());
+      dispatch(logOut());
       navigate('/login');
     }
   }, [isAuthenticated, dispatch, navigate]);

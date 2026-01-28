@@ -6,7 +6,7 @@ import './styles/NafraDataForm.css';
 import EditIcon from './icons/EditIcon';
 import DeleteIcon from './icons/DeleteIcon';
 import { EyeIcon } from './icons/EyeIcons';
-import { logout } from '../features/auth/authSlice';
+import { logOut } from '../features/auth/authSlice';
 import {
   setDistricts,
   openModal,
@@ -899,7 +899,7 @@ export default function NafraDataForm() {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logOut());
     navigate('/login');
   };
 

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { deleteDistrict } from '../features/district/districtSlice';
-import { logout } from '../features/auth/authSlice';
+import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictDeleteModal.css';
 
 const DistrictDeleteModal = ({ district, onClose }) => {
@@ -14,7 +14,7 @@ const DistrictDeleteModal = ({ district, onClose }) => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      dispatch(logout());
+      dispatch(logOut());
       navigate('/login');
     }
   }, [isAuthenticated, dispatch, navigate]);

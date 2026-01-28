@@ -1,12 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './features/auth/authSlice';
-import districtReducer from './features/district/districtSlice';
+import authReducer from './features/auth/authSlice'; // Import auth slice
+import agencyReducer from './features/agency/agencySlice'; // Import agency slice
+import districtReducer from './features/district/districtSlice'; // Import district slice
+import { apiSlice } from './app/api/apiSlice'; // Import the api slice
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
-    district: districtReducer,
+    agency: agencyReducer, // Add agency slice
+    district: districtReducer, // Add district slice
+    [apiSlice.reducerPath]: apiSlice.reducer, // Add api slice to the store
   },
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(apiSlice.middleware),
 });
 
 export default store;

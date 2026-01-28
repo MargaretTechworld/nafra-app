@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '../features/auth/authSlice';
+import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictViewModal.css';
 
 const DistrictViewModal = ({ district, onClose }) => {
@@ -12,7 +12,7 @@ const DistrictViewModal = ({ district, onClose }) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      dispatch(logout());
+      dispatch(logOut());
       navigate('/login');
     }
   }, [isAuthenticated, dispatch, navigate]);

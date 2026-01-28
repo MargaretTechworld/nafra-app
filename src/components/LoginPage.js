@@ -4,23 +4,30 @@ import { useDispatch, useSelector } from 'react-redux';
 import './styles/LoginPage.css';
 import logo from '../img/nafra-logo.png';
 import { EyeIcon, EyeOffIcon } from './icons/EyeIcons';
-import { login } from '../features/auth/authSlice';
+import { useLoginMutation } from '../app/api/apiSlice';
+import { setCredentials } from '../features/auth/authSlice';
 import isCorporateEmail from '../utils/emailValidation';
 
 export default function LoginPage() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, error } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { isAuthenticated, role, error } = useSelector((state) => state.auth);
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [login] = useLoginMutation(); // Use the login mutation from API slice
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/portal');
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/portal');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, role, navigate]);
 
   const validateEmail = (value) => {
     if (!value?.trim()) {
@@ -41,7 +48,7 @@ export default function LoginPage() {
     setEmailError(isCorporateEmail(value) ? '' : 'Only corporate emails are allowed.');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const validationMessage = validateEmail(email);
     if (validationMessage) {
@@ -49,7 +56,22 @@ export default function LoginPage() {
       return;
     }
     setEmailError('');
-    dispatch(login({ email, password }));
+
+    try {
+      const result = await login({ email, password }).unwrap();
+
+      // Handle the response structure from Rails backend
+      if (result) {
+        const { token, role, user_id: userId } = result;
+        const user = { id: userId };
+
+        dispatch(setCredentials({
+          token, role, userId: user?.id, user,
+        }));
+      }
+    } catch (err) {
+      setEmailError(err.data?.message || 'Login failed. Please try again.');
+    }
   };
 
   return (
@@ -59,7 +81,7 @@ export default function LoginPage() {
       </div>
       <div className="login-page-right">
         <hr className="login-page-hr" />
-        <h2>Welcome Back !</h2>
+        <h2>Welcome Back!</h2>
         <form onSubmit={handleSubmit}>
           <input
             className={`login-input ${emailError ? 'login-input-invalid' : ''}`}

@@ -11,13 +11,18 @@ import WelcomeScreen from './components/WelcomeScreen';
 import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import NafraDataForm from './components/NafraDataForm';
+import AdminDashboard from './components/AdminDashboard';
 import store from './store';
 
-function PrivateRoute({ children }) {
-  const { isAuthenticated } = useSelector((state) => state.auth);
+function PrivateRoute({ children, requiredRole = null }) {
+  const { isAuthenticated, role } = useSelector((state) => state.auth);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to="/portal" replace />;
   }
 
   return children;
@@ -25,6 +30,11 @@ function PrivateRoute({ children }) {
 
 PrivateRoute.propTypes = {
   children: PropTypes.node.isRequired,
+  requiredRole: PropTypes.string,
+};
+
+PrivateRoute.defaultProps = {
+  requiredRole: null,
 };
 
 function App() {
@@ -35,6 +45,14 @@ function App() {
           <Route path="/" element={<WelcomeScreen />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route
+            path="/admin"
+            element={(
+              <PrivateRoute requiredRole="admin">
+                <AdminDashboard />
+              </PrivateRoute>
+            )}
+          />
           <Route
             path="/portal"
             element={(
