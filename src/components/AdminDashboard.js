@@ -2,7 +2,8 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logOut } from '../features/auth/authSlice';
-import './styles/AdminDashboard.css';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
@@ -15,57 +16,80 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="admin-dashboard">
-      <header className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <div className="user-info">
-          <span>
-            Welcome,
-            {user?.name || 'Admin'}
-            {' '}
-            (
-            {role}
-            )
-          </span>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="logout-btn"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              Welcome, {user?.name || 'Admin'} ({role})
+            </span>
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="dashboard-content">
-        <section className="dashboard-overview">
-          <h2>Overview</h2>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <h3>Total Users</h3>
-              <p className="stat-number">0</p>
-            </div>
-            <div className="stat-card">
-              <h3>Total Agencies</h3>
-              <p className="stat-number">0</p>
-            </div>
-            <div className="stat-card">
-              <h3>Total Submissions</h3>
-              <p className="stat-number">0</p>
-            </div>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Overview Section */}
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Users</CardTitle>
+                <CardDescription>Registered system users</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">0</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Agencies</CardTitle>
+                <CardDescription>Active agencies</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">0</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Submissions</CardTitle>
+                <CardDescription>Form submissions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">0</p>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
-        <section className="dashboard-actions">
-          <h2>Management</h2>
-          <div className="action-buttons">
-            <button type="button" className="action-btn">Manage Users</button>
-            <button type="button" className="action-btn">Manage Agencies</button>
-            <button type="button" className="action-btn">View Submissions</button>
-            <button type="button" className="action-btn">Analytics</button>
+        {/* Management Section */}
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button variant="default" className="h-20">
+              Manage Users
+            </Button>
+            <Button variant="secondary" className="h-20">
+              Manage Agencies
+            </Button>
+            <Button variant="outline" className="h-20">
+              View Submissions
+            </Button>
+            <Button variant="outline" className="h-20">
+              Analytics
+            </Button>
           </div>
         </section>
       </main>
     </div>
   );
 }
+
