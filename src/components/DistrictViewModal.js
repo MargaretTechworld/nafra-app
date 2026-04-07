@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictViewModal.css';
 
-const DistrictViewModal = ({ district, onClose }) => {
+const DistrictViewModal = ({ district = null, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -122,9 +122,9 @@ ${districtData.isSubmission ? `Submission Date: ${new Date(districtData.submissi
             <div key={dist.id} className="district-card">
 
               {district.isSubmission && (
-              <div className="district-header">
-                <h4>{dist.name}</h4>
-              </div>
+                <div className="district-header">
+                  <h4>{dist.name}</h4>
+                </div>
               )}
 
               {dist.chiefdoms.map((chiefdom) => (
@@ -147,23 +147,23 @@ ${districtData.isSubmission ? `Submission Date: ${new Date(districtData.submissi
 
                       <div className="fertilizer-bag-sizes">
                         {fert.bag25kg > 0 && (
-                        <span className="bag-size-info">
-                          {fert.bag25kg}
-                          {' '}
-                          x 25kg bags
-                        </span>
+                          <span className="bag-size-info">
+                            {fert.bag25kg}
+                            {' '}
+                            x 25kg bags
+                          </span>
                         )}
                         {fert.bag50kg > 0 && (
-                        <span className="bag-size-info">
-                          {fert.bag50kg}
-                          {' '}
-                          x 50kg bags
-                        </span>
+                          <span className="bag-size-info">
+                            {fert.bag50kg}
+                            {' '}
+                            x 50kg bags
+                          </span>
                         )}
                         {fert.bag25kg === 0 && fert.bag50kg === 0 && (
-                        <span className="bag-size-info no-bags">
-                          No bag quantities specified
-                        </span>
+                          <span className="bag-size-info no-bags">
+                            No bag quantities specified
+                          </span>
                         )}
                       </div>
                     </div>
@@ -207,6 +207,10 @@ const districtShape = {
   chiefdoms: PropTypes.arrayOf(PropTypes.shape(chiefdomShape)),
 };
 
+DistrictViewModal.defaultProps = {
+  district: null,
+};
+
 DistrictViewModal.propTypes = {
   district: PropTypes.shape({
     id: PropTypes.string.isRequired,
@@ -221,10 +225,6 @@ DistrictViewModal.propTypes = {
     }),
   }),
   onClose: PropTypes.func.isRequired,
-};
-
-DistrictViewModal.defaultProps = {
-  district: null,
 };
 
 export default DistrictViewModal;

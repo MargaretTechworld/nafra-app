@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const SidebarItem = ({
-  icon: Icon, label, active, onClick, collapsed,
+  icon: Icon, label, active = false, onClick = () => { }, collapsed = false,
 }) => (
   <button
     type="button"

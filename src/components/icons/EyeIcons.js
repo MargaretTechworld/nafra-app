@@ -1,6 +1,7 @@
+/* eslint-disable react/require-default-props */
 import PropTypes from 'prop-types';
 
-export function EyeIcon({ className }) {
+export function EyeIcon({ className = '' }) {
   return (
     <svg
       className={className}
@@ -30,7 +31,7 @@ export function EyeIcon({ className }) {
   );
 }
 
-export function EyeOffIcon({ className }) {
+export function EyeOffIcon({ className = '' }) {
   return (
     <svg
       className={className}
@@ -70,9 +71,9 @@ export function EyeOffIcon({ className }) {
 }
 
 EyeIcon.propTypes = {
-  className: PropTypes.string.isRequired,
+  className: PropTypes.string,
 };
 
 EyeOffIcon.propTypes = {
-  className: PropTypes.string.isRequired,
+  className: PropTypes.string,
 };

@@ -1,15 +1,18 @@
 import PropTypes from 'prop-types';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { deleteDistrict } from '../features/district/districtSlice';
+import { removeDistrict, saveDraft, triggerSuccessMessage } from '../features/draft/draftSlice';
 import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictDeleteModal.css';
 
-const DistrictDeleteModal = ({ district, onClose }) => {
+const DistrictDeleteModal = ({ district = null, onClose }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
+  const districtForm = useSelector((state) => state.draft.districtForm);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -24,8 +27,38 @@ const DistrictDeleteModal = ({ district, onClose }) => {
   }
 
   const handleDelete = () => {
-    dispatch(deleteDistrict(district.id));
-    onClose();
+    setError('');
+    setIsDeleting(true);
+
+    // 1. Prepare data for backend
+    const updatedDistricts = districtForm.data.districts.filter((d) => d.id !== district.id);
+
+    const draftData = {
+      title: districtForm.title || `Draft - ${new Date().toLocaleDateString()}`,
+      data: {
+        ...districtForm.data,
+        districts: updatedDistricts,
+      },
+      status: 'draft',
+    };
+
+    // 2. Persist to backend first
+    dispatch(saveDraft({ draftData, draftId: districtForm.id }))
+      .unwrap()
+      .then(() => {
+        // 3. Update local state ONLY on success
+        dispatch(removeDistrict(district.id));
+        dispatch(triggerSuccessMessage());
+        onClose();
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to delete district:', err);
+        setError(err.message || 'Failed to delete district. Please try again.');
+      })
+      .finally(() => {
+        setIsDeleting(false);
+      });
   };
 
   return (
@@ -70,13 +103,22 @@ const DistrictDeleteModal = ({ district, onClose }) => {
             )}
           </div>
         </div>
-
+        {error && (
+          <p
+            className="modal-error"
+            style={{
+              color: '#d32f2f', padding: '0 24px', margin: '-8px 0 16px', fontSize: '14px',
+            }}
+          >
+            {error}
+          </p>
+        )}
         <div className="modal-footer">
-          <button type="button" className="secondary-btn" onClick={onClose}>
+          <button type="button" className="secondary-btn" onClick={onClose} disabled={isDeleting}>
             Cancel
           </button>
-          <button type="button" className="danger-btn" onClick={handleDelete}>
-            Delete District
+          <button type="button" className="danger-btn" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? 'Deleting...' : 'Delete District'}
           </button>
         </div>
       </div>

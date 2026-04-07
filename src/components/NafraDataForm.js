@@ -6,48 +6,62 @@ import './styles/NafraDataForm.css';
 import EditIcon from './icons/EditIcon';
 import DeleteIcon from './icons/DeleteIcon';
 import { EyeIcon } from './icons/EyeIcons';
-import { logOut } from '../features/auth/authSlice';
 import {
-  setDistricts,
+  fetchReferenceData,
+  saveDraft,
+  fetchDrafts,
+  submitDraft,
   openModal,
   closeModal,
   setDistrictForm,
-  setDistrictErrors,
   setFormError,
+  addDistrict,
+  triggerSuccessMessage, // Added triggerSuccessMessage
+  hideSuccessMessage,
   openViewModal,
   closeViewModal,
   openEditModal,
   closeEditModal,
   openDeleteModal,
   closeDeleteModal,
-  addDistrict,
-} from '../features/district/districtSlice';
+  prepareForNewDistrict,
+} from '../features/draft/draftSlice';
+import { logOut } from '../features/auth/authSlice';
 import DistrictViewModal from './DistrictViewModal';
 import DistrictEditModal from './DistrictEditModal';
 import DistrictDeleteModal from './DistrictDeleteModal';
 import logo from '../img/nafra-logo.png';
 import logo2 from '../img/logo3.png';
 import {
-  DISTRICT_CHIEFDOMS,
-  DISTRICT_OPTIONS,
-  FERTILIZER_OPTIONS,
-} from '../constants/districtData';
+  getDistrictOptions,
+  getChiefdomOptions,
+  getFertilizerOptions,
+  getDealerOptions,
+} from '../constants/referenceData';
 
-const MAX_VISIBLE_DISTRICTS = 4;
-const DISTRICT_ROW_HEIGHT_PX = 72;
-const INITIAL_DISTRICT_ERRORS = {
-  district: '',
-  customDistrict: '',
-};
-const STORAGE_KEYS = {
-  savedDistricts: 'nafra.savedDistricts',
-};
-const DUPLICATE_ERRORS = {
-  chiefdom: 'This chiefdom already exists in the current district entry.',
-  fertilizer: 'This fertilizer already exists for this chiefdom.',
-};
+import {
+  DUPLICATE_ERRORS,
+  resetChiefdomValidationErrors,
+  clearChiefdomError,
+  setChiefdomError,
+  clearFertilizerError,
+  addFertilizerValidationError,
+  removeFertilizerValidationError,
+  setFertilizerError,
+  validateDistrictSelection,
+  createFertilizerEntry,
+  createChiefdomEntry,
+  getChiefdomDisplayName,
+  hasDuplicateChiefdomName,
+  hasDuplicateFertilizerName,
+  getChiefdomFertilizerSummary,
+  validateChiefdomEntry,
+  uniqueId,
+  createChiefdomValidationState,
+  createFertilizerValidationState,
+} from '../utils/formHelpers';
 
-const FieldError = ({ id, message }) => {
+const FieldError = ({ id = undefined, message = '' }) => {
   if (!message) {
     return null;
   }
@@ -82,368 +96,114 @@ FormLabel.propTypes = {
   label: PropTypes.string.isRequired,
 };
 
-const uniqueId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-
-const normalizeText = (value = '') => value.trim().toLowerCase();
-
-const crFertValSt = () => ({
-  name: '',
-  dealership: '',
-  bag25kg: '',
-  bag50kg: '',
-});
-
-const crChfValSt = (fertilizers = []) => ({
-  name: '',
-  fertilizers: fertilizers.reduce((acc, fertilizer) => {
-    acc[fertilizer.id] = crFertValSt();
-    return acc;
-  }, {}),
-});
-
-const resetChiefdomValEr = (chiefdom) => crChfValSt(chiefdom.fertilizers);
-
-const clearChiefdomError = (validationErrors, field) => ({
-  ...validationErrors,
-  [field]: '',
-});
-
-const setChiefdomError = (validationErrors, field, message) => ({
-  ...validationErrors,
-  [field]: message,
-});
-
-const clearFertilizerError = (validationErrors, fertilizerId, field) => {
-  const fertilizerErrors = validationErrors.fertilizers[fertilizerId]
-    || crFertValSt();
-  return {
-    ...validationErrors,
-    fertilizers: {
-      ...validationErrors.fertilizers,
-      [fertilizerId]: {
-        ...fertilizerErrors,
-        [field]: '',
-      },
-    },
-  };
-};
-
-const addFertilizerValidationError = (validationErrors, fertilizerId) => ({
-  ...validationErrors,
-  fertilizers: {
-    ...validationErrors.fertilizers,
-    [fertilizerId]: crFertValSt(),
-  },
-});
-
-const removeFertilizerValidationError = (validationErrors, fertilizerId) => {
-  const { [fertilizerId]: _removed, ...rest } = validationErrors.fertilizers;
-  return {
-    ...validationErrors,
-    fertilizers: rest,
-  };
-};
-
-const setFertilizerError = (validationErrors, fertilizerId, field, message) => {
-  const fertilizerErrors = validationErrors.fertilizers[fertilizerId]
-    || crFertValSt();
-  return {
-    ...validationErrors,
-    fertilizers: {
-      ...validationErrors.fertilizers,
-      [fertilizerId]: {
-        ...fertilizerErrors,
-        [field]: message,
-      },
-    },
-  };
-};
-
-const valDistSelection = (districtForm) => {
-  const errors = { ...INITIAL_DISTRICT_ERRORS };
-
-  if (!districtForm.district) {
-    errors.district = 'Select a district before continuing.';
-  }
-
-  if (districtForm.district === 'custom' && !districtForm.customDistrict.trim()) {
-    errors.customDistrict = 'Enter the custom district name.';
-  }
-
-  const isValid = !errors.district && !errors.customDistrict;
-  return { isValid, errors };
-};
-
-const createFertilizerEntry = () => ({
-  id: uniqueId('fert'),
-  name: '',
-  useCustomName: false,
-  customName: '',
-  dealership: '',
-  bag25kg: '',
-  bag50kg: '',
-});
-
-const createChiefdomEntry = () => {
-  const initialFertilizer = createFertilizerEntry();
-  return {
-    id: uniqueId('chiefdom'),
-    name: '',
-    useCustomName: false,
-    customName: '',
-    fertilizers: [initialFertilizer],
-    isCollapsed: false,
-    validationErrors: crChfValSt([initialFertilizer]),
-  };
-};
-
-const getChiefdomNameValue = (chiefdom) => {
-  if (!chiefdom) {
-    return '';
-  }
-  if (chiefdom.useCustomName) {
-    return chiefdom.customName.trim();
-  }
-  return chiefdom.name;
-};
-
-const getChiefdomDisplayName = (chiefdom) => getChiefdomNameValue(chiefdom) || 'Not specified';
-
-const getfertNameValue = (fertilizer) => {
-  if (!fertilizer) {
-    return '';
-  }
-  if (fertilizer.useCustomName) {
-    return fertilizer.customName.trim();
-  }
-  return fertilizer.name;
-};
-
-const hasDuplicateChiefdomName = (chiefdoms, targetId, candidateName) => {
-  const normalizedCandidate = normalizeText(candidateName);
-  if (!normalizedCandidate) {
-    return false;
-  }
-  return chiefdoms.some(
-    (chiefdom) => chiefdom.id !== targetId
-      && normalizeText(getChiefdomNameValue(chiefdom)) === normalizedCandidate,
-  );
-};
-
-const hasDuplicatefertName = (fertilizers, targetId, candidateName) => {
-  const normalizedCandidate = normalizeText(candidateName);
-  if (!normalizedCandidate) {
-    return false;
-  }
-  return fertilizers.some(
-    (fertilizer) => fertilizer.id !== targetId
-      && normalizeText(getfertNameValue(fertilizer)) === normalizedCandidate,
-  );
-};
-
-const getChiefdomFertilizerSummary = (chiefdom) => {
-  if (!chiefdom.fertilizers || chiefdom.fertilizers.length === 0) {
-    return 'No fertilizers added';
-  }
-
-  const summary = [];
-  const fertilizerMap = new Map();
-
-  // Group fertilizers by name and dealership
-  chiefdom.fertilizers.forEach((fertilizer) => {
-    const key = `${fertilizer.name || fertilizer.customName}-${fertilizer.dealership}`;
-    if (!fertilizerMap.has(key)) {
-      fertilizerMap.set(key, {
-        name: fertilizer.name || fertilizer.customName,
-        dealership: fertilizer.dealership,
-        bag25kg: 0,
-        bag50kg: 0,
-      });
-    }
-    const current = fertilizerMap.get(key);
-
-    // Handle both old and new data formats
-    if (fertilizer.bagSize && fertilizer.bagCount) {
-      // Convert old format to new format
-      const count = Number(fertilizer.bagCount) || 0;
-      if (fertilizer.bagSize === '25') {
-        current.bag25kg += count;
-      } else if (fertilizer.bagSize === '50') {
-        current.bag50kg += count;
-      }
-    } else {
-      // New format
-      current.bag25kg += Number(fertilizer.bag25kg) || 0;
-      current.bag50kg += Number(fertilizer.bag50kg) || 0;
-    }
-  });
-
-  // Generate summary strings
-  fertilizerMap.forEach((fertilizer) => {
-    const parts = [];
-    if (fertilizer.bag25kg > 0) {
-      parts.push(`${fertilizer.bag25kg} x 25kg`);
-    }
-    if (fertilizer.bag50kg > 0) {
-      parts.push(`${fertilizer.bag50kg} x 50kg`);
-    }
-
-    const dealerInfo = fertilizer.dealership ? ` (${fertilizer.dealership})` : '';
-    if (parts.length > 0) {
-      summary.push(`${fertilizer.name}${dealerInfo}: ${parts.join(', ')}`);
-    } else {
-      summary.push(`${fertilizer.name}${dealerInfo}: No quantities specified`);
-    }
-  });
-
-  return summary.join('; ');
-};
-
-const validateChiefdomEntry = (chiefdom) => {
-  const errors = crChfValSt(chiefdom.fertilizers);
-  const nameValue = getChiefdomNameValue(chiefdom);
-
-  if (!nameValue) {
-    errors.name = 'Select or enter a chiefdom name.';
-  }
-
-  chiefdom.fertilizers.forEach((fertilizer) => {
-    const fertilizerErrors = errors.fertilizers[fertilizer.id]
-      || crFertValSt();
-    const fertName = fertilizer.useCustomName ? fertilizer.customName.trim() : fertilizer.name;
-    if (!fertName) {
-      fertilizerErrors.name = 'Select or enter a fertilizer name.';
-    }
-    if (!fertilizer.dealership.trim()) {
-      fertilizerErrors.dealership = 'Enter the fertilizer dealership name.';
-    }
-
-    // Validate bag counts - at least one bag size must be filled with valid number
-    const has25kg = fertilizer.bag25kg
-      && fertilizer.bag25kg.trim()
-      && Number(fertilizer.bag25kg) > 0;
-    const has50kg = fertilizer.bag50kg
-      && fertilizer.bag50kg.trim()
-      && Number(fertilizer.bag50kg) > 0;
-
-    if (!has25kg && !has50kg) {
-      fertilizerErrors.bagSizes = 'At least one bag size (25kg or 50kg) must be specified.';
-    } else {
-      // Clear the combined error if at least one is valid
-      delete fertilizerErrors.bagSizes;
-    }
-
-    // Only validate individual fields if they have values
-    if (fertilizer.bag25kg && fertilizer.bag25kg.trim()
-        && Number(fertilizer.bag25kg) <= 0) {
-      fertilizerErrors.bag25kg = 'Enter valid bag count for 25kg bags.';
-    } else if (!fertilizer.bag25kg || !fertilizer.bag25kg.trim()) {
-      // Clear error if field is empty
-      delete fertilizerErrors.bag25kg;
-    }
-
-    if (fertilizer.bag50kg && fertilizer.bag50kg.trim()
-        && Number(fertilizer.bag50kg) <= 0) {
-      fertilizerErrors.bag50kg = 'Enter valid bag count for 50kg bags.';
-    } else if (!fertilizer.bag50kg || !fertilizer.bag50kg.trim()) {
-      // Clear error if field is empty
-      delete fertilizerErrors.bag50kg;
-    }
-
-    errors.fertilizers[fertilizer.id] = fertilizerErrors;
-  });
-
-  const hasName = !errors.name;
-  const allFertilizersValid = Object.values(errors.fertilizers).every(
-    (fertilizerErrors) => {
-      const hasName = !fertilizerErrors.name;
-      const hasDealership = !fertilizerErrors.dealership;
-      const hasValid25kg = !fertilizerErrors.bag25kg;
-      const hasValid50kg = !fertilizerErrors.bag50kg;
-      return hasName && hasDealership && hasValid25kg && hasValid50kg;
-    },
-  );
-
-  return { isValid: hasName && allFertilizersValid, errors };
-};
-
-const getDistrictLabel = (value, customValue) => {
-  if (value === 'custom') {
-    return customValue.trim();
-  }
-  return DISTRICT_OPTIONS.find((option) => option.value === value)?.label || '';
-};
+const MAX_VISIBLE_DISTRICTS = 5;
+const DISTRICT_ROW_HEIGHT_PX = 72; // Approximate height of a district row
 
 export default function NafraDataForm() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const districtState = useSelector((state) => state.district);
+
+  // Get state from draft slice
+  const draftState = useSelector((state) => state.draft);
+  const authState = useSelector((state) => state.auth);
 
   const {
-    districts,
-    isModalOpen,
     districtForm,
-    districtErrors,
     formError,
-    viewModalDistrict,
-    editModalDistrict,
-    deleteModalDistrict,
-  } = districtState;
+    draftsError,
+    viewModalDraft,
+    editModalDraft,
+    deleteModalDraft,
+    isSuccessMessageVisible,
+    isModalOpen,
+    isLoadingDrafts,
+    districts: referenceDistricts, // Change from referenceDistricts to districts
+    chiefdoms: referenceChiefdoms,
+    fertilizers: referenceFertilizers,
+    dealers: referenceDealers,
+  } = draftState;
 
-  // State for submissions view and confirmation modal
-  const [showSubmissions, setShowSubmissions] = useState(false);
+  const { isAuthenticated } = authState;
+
+  // State for view tabs and confirmation modal
+  const [viewTab, setViewTab] = useState('active'); // 'active', 'submissions'
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [previousSubmissions, setPreviousSubmissions] = useState([]);
 
+  // Fetch reference data on component mount
   useEffect(() => {
-    // Initialize districts from localStorage on component mount
-    if (typeof window !== 'undefined') {
-      try {
-        const savedDistricts = window.localStorage.getItem(STORAGE_KEYS.savedDistricts);
-        if (savedDistricts) {
-          const parsedDistricts = JSON.parse(savedDistricts);
-          dispatch(setDistricts(parsedDistricts));
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.warn('Unable to load district list from storage', error);
-      }
+    dispatch(fetchReferenceData());
+
+    // One-time cleanup of legacy localStorage data for drafts and submissions
+    try {
+      window.localStorage.removeItem('nafra-submissions');
+      window.localStorage.removeItem('nafra-drafts');
+      // eslint-disable-next-line no-console
+      console.log('Cleaned up legacy localStorage data.');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('LocalStorage cleanup failed', e);
     }
   }, [dispatch]);
 
+  // Fetch saved drafts when component mounts and user is authenticated
   useEffect(() => {
-    // Save districts to localStorage whenever they change
-    if (typeof window === 'undefined') {
-      return;
+    if (isAuthenticated) {
+      dispatch(fetchDrafts());
     }
-    try {
-      window.localStorage.setItem(STORAGE_KEYS.savedDistricts, JSON.stringify(districts));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn('Unable to persist district list', error);
-    }
-  }, [districts]);
+  }, [dispatch, isAuthenticated]);
 
-  const bagTotals = useMemo(
+  // Hide success message after 3 seconds
+  useEffect(() => {
+    if (isSuccessMessageVisible) {
+      const timer = setTimeout(() => {
+        dispatch(hideSuccessMessage());
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [isSuccessMessageVisible, dispatch]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      dispatch(logOut());
+      navigate('/login');
+    }
+  }, [isAuthenticated, dispatch, navigate]);
+
+  // Memoized computed values (must be before early return)
+  const districtOptions = useMemo(
+    () => getDistrictOptions(referenceDistricts),
+    [referenceDistricts],
+  );
+  const fertilizerOptions = useMemo(
+    () => getFertilizerOptions(referenceFertilizers),
+    [referenceFertilizers],
+  );
+  const dealerOptions = useMemo(
+    () => getDealerOptions(referenceDealers),
+    [referenceDealers],
+  );
+
+  // Calculate totals for the modal's current data
+  const modalBagTotals = useMemo(
     () => {
-      if (!districtForm || !districtForm.chiefdoms) {
+      if (!districtForm.chiefdoms || !Array.isArray(districtForm.chiefdoms)) {
         return { total25: 0, total50: 0 };
       }
       return districtForm.chiefdoms.reduce(
         (totals, chiefdom) => {
           const chiefdomTotals = chiefdom.fertilizers.reduce(
-            (acc, fertilizer) => {
+            (fertAcc, fertilizer) => {
               const bag25kgCount = Number(fertilizer.bag25kg) || 0;
               const bag50kgCount = Number(fertilizer.bag50kg) || 0;
               return {
-                total25: acc.total25 + bag25kgCount,
-                total50: acc.total50 + bag50kgCount,
+                total25: fertAcc.total25 + bag25kgCount,
+                total50: fertAcc.total50 + bag50kgCount,
               };
             },
             { total25: 0, total50: 0 },
           );
-
           return {
             total25: totals.total25 + chiefdomTotals.total25,
             total50: totals.total50 + chiefdomTotals.total50,
@@ -452,10 +212,23 @@ export default function NafraDataForm() {
         { total25: 0, total50: 0 },
       );
     },
-    [districtForm],
+    [districtForm.chiefdoms],
   );
 
+  // Helper function to get district label
+  const getDistrictLabel = (value, customValue) => {
+    if (value === 'custom') {
+      return customValue.trim();
+    }
+    return districtOptions.find((option) => option.value === value)?.label || '';
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const handleOpenModal = () => {
+    dispatch(prepareForNewDistrict());
     dispatch(openModal());
   };
 
@@ -492,10 +265,13 @@ export default function NafraDataForm() {
     const { value } = event.target;
     if (!districtForm) return;
 
-    dispatch(setDistrictErrors({
-      district: '',
-      customDistrict: value === 'custom' ? districtErrors.customDistrict : '',
-    }));
+    // Only show error if no district is selected
+    if (!value) {
+      dispatch(setFormError('Please select a district before continuing.'));
+    } else {
+      dispatch(setFormError('')); // Clear error when district is selected
+    }
+
     dispatch(setDistrictForm({
       ...districtForm,
       district: value,
@@ -506,7 +282,7 @@ export default function NafraDataForm() {
         useCustomName: false,
         customName: '',
         isCollapsed: false,
-        validationErrors: resetChiefdomValEr(chiefdom),
+        validationErrors: resetChiefdomValidationErrors(chiefdom),
       })),
     }));
   };
@@ -514,10 +290,7 @@ export default function NafraDataForm() {
   const handleCustomDistrictChange = (event) => {
     if (!districtForm) return;
 
-    dispatch(setDistrictErrors({
-      ...districtErrors,
-      customDistrict: '',
-    }));
+    dispatch(setFormError(''));
     dispatch(setDistrictForm({
       ...districtForm,
       customDistrict: event.target.value,
@@ -527,6 +300,11 @@ export default function NafraDataForm() {
   const hdlChfSlct = (chiefdomId, value) => {
     if (!districtForm) return;
 
+    // Find the chiefdom name from reference data
+    const selectedChiefdom = value !== 'custom'
+      ? referenceChiefdoms.find((c) => c.id.toString() === value)
+      : null;
+
     dispatch(setDistrictForm({
       ...districtForm,
       chiefdoms: districtForm.chiefdoms.map((chiefdom) => {
@@ -534,9 +312,10 @@ export default function NafraDataForm() {
           return chiefdom;
         }
         const validationErrors = chiefdom.validationErrors
-          || resetChiefdomValEr(chiefdom);
+          || resetChiefdomValidationErrors(chiefdom);
+        const chiefdomName = selectedChiefdom ? selectedChiefdom.name : value;
         const isDuplicate = value !== 'custom'
-          && hasDuplicateChiefdomName(districtForm.chiefdoms, chiefdomId, value);
+          && hasDuplicateChiefdomName(districtForm.chiefdoms, chiefdomId, chiefdomName);
         const nextErrors = isDuplicate
           ? setChiefdomError(validationErrors, 'name', DUPLICATE_ERRORS.chiefdom)
           : clearChiefdomError(validationErrors, 'name');
@@ -553,7 +332,7 @@ export default function NafraDataForm() {
         return {
           ...chiefdom,
           useCustomName: false,
-          name: value,
+          name: value, // Store the chiefdom ID, not the name
           customName: '',
           isCollapsed: false,
           validationErrors: nextErrors,
@@ -572,7 +351,7 @@ export default function NafraDataForm() {
           return chiefdom;
         }
         const baseErrors = chiefdom.validationErrors
-          || resetChiefdomValEr(chiefdom);
+          || resetChiefdomValidationErrors(chiefdom);
         let updatedErrors = baseErrors;
         if (field === 'customName') {
           const isDuplicate = hasDuplicateChiefdomName(
@@ -643,12 +422,12 @@ export default function NafraDataForm() {
           return chiefdom;
         }
         const validationErrors = chiefdom.validationErrors
-          || resetChiefdomValEr(chiefdom);
+          || resetChiefdomValidationErrors(chiefdom);
         let nextErrors = validationErrors;
         if (value === 'custom') {
           nextErrors = clearFertilizerError(validationErrors, fertilizerId, 'name');
         } else {
-          const isDuplicate = hasDuplicatefertName(
+          const isDuplicate = hasDuplicateFertilizerName(
             chiefdom.fertilizers,
             fertilizerId,
             value,
@@ -695,7 +474,7 @@ export default function NafraDataForm() {
           return chiefdom;
         }
         const currentErrors = chiefdom.validationErrors
-          || resetChiefdomValEr(chiefdom);
+          || resetChiefdomValidationErrors(chiefdom);
         let updatedErrors = currentErrors;
 
         if (field === 'bag25kg') {
@@ -705,7 +484,7 @@ export default function NafraDataForm() {
         } else if (field === 'dealership') {
           updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'dealership');
         } else if (field === 'customName') {
-          const isDuplicate = hasDuplicatefertName(
+          const isDuplicate = hasDuplicateFertilizerName(
             chiefdom.fertilizers,
             fertilizerId,
             value,
@@ -743,7 +522,7 @@ export default function NafraDataForm() {
         }
         const newFertilizer = createFertilizerEntry();
         const baseErrors = chiefdom.validationErrors
-          || resetChiefdomValEr(chiefdom);
+          || resetChiefdomValidationErrors(chiefdom);
         return {
           ...chiefdom,
           fertilizers: [newFertilizer, ...chiefdom.fertilizers],
@@ -775,7 +554,7 @@ export default function NafraDataForm() {
               ? chiefdom.validationErrors
               : removeFertilizerValidationError(
                 chiefdom.validationErrors
-                || resetChiefdomValEr(chiefdom),
+                || resetChiefdomValidationErrors(chiefdom),
                 fertilizerId,
               ),
         };
@@ -791,16 +570,21 @@ export default function NafraDataForm() {
       return;
     }
 
-    const { isValid: isDistrictValid, errors: nextDistrictErrors } = valDistSelection(districtForm);
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      dispatch(setFormError('Please log in to save drafts.'));
+      return;
+    }
+
+    const { isValid: isDistrictValid } = validateDistrictSelection(districtForm);
     if (!isDistrictValid) {
-      dispatch(setDistrictErrors(nextDistrictErrors));
       dispatch(setFormError('Please resolve the highlighted district errors.'));
       return;
     }
 
     const invalidChiefdoms = districtForm.chiefdoms
       .map((chiefdom) => {
-        const validation = validateChiefdomEntry(chiefdom);
+        const validation = validateChiefdomEntry(chiefdom, referenceChiefdoms);
         return validation.isValid ? null : { id: chiefdom.id, validationErrors: validation.errors };
       })
       .filter(Boolean);
@@ -825,7 +609,7 @@ export default function NafraDataForm() {
     }
 
     const districtLabel = getDistrictLabel(districtForm.district, districtForm.customDistrict);
-    const duplicateDistrictExists = districts.some(
+    const duplicateDistrictExists = (districtForm.data?.districts || []).some(
       (district) => district.name.toLowerCase() === districtLabel.toLowerCase(),
     );
     if (duplicateDistrictExists) {
@@ -835,7 +619,9 @@ export default function NafraDataForm() {
 
     const preparedChiefdoms = districtForm.chiefdoms
       .map((chiefdom) => {
-        const chiefdomName = chiefdom.useCustomName ? chiefdom.customName.trim() : chiefdom.name;
+        const chiefdomName = chiefdom.useCustomName
+          ? chiefdom.customName.trim()
+          : (referenceChiefdoms.find((c) => c.id.toString() === chiefdom.name)?.name || '');
         if (!chiefdomName) {
           return null;
         }
@@ -887,15 +673,42 @@ export default function NafraDataForm() {
     const payload = {
       district: districtLabel,
       chiefdoms: preparedChiefdoms,
-      totals: bagTotals,
+      totals: modalBagTotals, // Use modal totals instead of saved totals
       createdAt: new Date().toISOString(),
     };
 
     const summaryName = `${districtLabel}`;
-    dispatch(addDistrict({ id: uniqueId('record'), name: summaryName, ...payload }));
+    const newDistrictRecord = { id: uniqueId('record'), name: summaryName, ...payload };
+
+    // Prepare updated draft data including the new district
+    const updatedDistricts = [...(districtForm.data?.districts || []), newDistrictRecord];
+    const draftData = {
+      title: districtForm.title || `Draft - ${new Date().toLocaleDateString()}`,
+      data: {
+        ...districtForm.data,
+        districts: updatedDistricts,
+      },
+      status: 'draft',
+    };
+
     // eslint-disable-next-line no-console
-    console.log('District submission payload', payload);
-    dispatch(closeModal());
+    console.log('Manually saving draft with new district:', { isAuthenticated, draftData: JSON.stringify(draftData, null, 2) });
+    dispatch(saveDraft({ draftData, draftId: districtForm.id }))
+      .unwrap()
+      .then(() => {
+        // eslint-disable-next-line no-console
+        console.log('Draft saved successfully');
+
+        // Update local state
+        dispatch(addDistrict(newDistrictRecord));
+        dispatch(triggerSuccessMessage());
+        dispatch(closeModal());
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save draft:', error);
+        dispatch(setFormError('Failed to save draft. Please try again.'));
+      });
   };
 
   const handleLogout = () => {
@@ -904,29 +717,75 @@ export default function NafraDataForm() {
   };
 
   // Handler for View Previous Submissions
-  const handleViewSubmissions = () => {
-    // Load previous submissions from localStorage or API
+  const handleViewSubmissions = async () => {
+    // Load previous submissions from API
     try {
-      const savedSubmissions = window.localStorage.getItem('nafra-submissions');
-      if (savedSubmissions) {
-        const submissions = JSON.parse(savedSubmissions);
-        // Sort by submission date (newest first) and filter by current user
-        // Sort submissions by date (newest first)
-        const sortedSubmissions = submissions.sort(
-          (a, b) => new Date(b.submissionDate) - new Date(a.submissionDate),
-        );
-        setPreviousSubmissions(sortedSubmissions);
+      const { token } = authState;
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api'}/submissions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch submissions');
       }
+
+      const result = await response.json();
+      // Result is { submissions: [], pagination: {} }
+      const submissions = result.submissions || [];
+
+      // Sort submissions by date (newest first)
+      const sortedSubmissions = [...submissions].sort(
+        (a, b) => new Date(b.submitted_at) - new Date(a.submitted_at),
+      );
+
+      // Map backend submission to frontend structure for viewing
+      const mappedSubmissions = sortedSubmissions.map((sub) => ({
+        id: sub.id,
+        submissionDate: sub.submitted_at,
+        districts: sub.submission_items ? Array.from(
+          new Set(sub.submission_items.map((item) => item.district?.name)),
+        ).map((name) => {
+          const districtItems = sub.submission_items.filter((item) => item.district?.name === name);
+          return {
+            name,
+            chiefdoms: Array.from(
+              new Set(districtItems.map((item) => item.chiefdom?.name)),
+            ).map((cName) => {
+              const chiefdomItems = districtItems.filter((item) => item.chiefdom?.name === cName);
+              return {
+                name: cName,
+                fertilizers: chiefdomItems.map((item) => ({
+                  name: item.fertilizer?.name,
+                  dealership: item.dealer?.name,
+                  bag25kg: item.bags_25kg,
+                  bag50kg: item.bags_50kg,
+                })),
+              };
+            }),
+          };
+        }) : [],
+        totals: {
+          total25: sub.total_bags_25kg,
+          total50: sub.total_bags_50kg,
+        },
+      }));
+
+      setPreviousSubmissions(mappedSubmissions);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.warn('Unable to load previous submissions', error);
+      console.error('Unable to load previous submissions', error);
+      dispatch(setFormError('Failed to load previous submissions.'));
     }
-    setShowSubmissions(true);
+    setViewTab('submissions');
   };
 
   // Handler for Submit button
   const handleSubmit = () => {
-    if (districts.length === 0) {
+    if (!districtForm.data?.districts || districtForm.data.districts.length === 0) {
       dispatch(setFormError('Please add at least one district before submitting.'));
       return;
     }
@@ -934,49 +793,38 @@ export default function NafraDataForm() {
   };
 
   // Handler for confirming submission
-  const handleConfirmSubmission = () => {
-    setShowConfirmModal(false);
-
-    // Prepare submission data
-    const submissionData = {
-      id: uniqueId('submission'),
-      userId: 'current-user-id', // Replace with actual user ID from auth state
-      submissionDate: new Date().toISOString(),
-      districts, // Store original district structure with bag25kg/bag50kg fields
-      totals: bagTotals,
-    };
-
-    // Save to localStorage (replace with actual database call)
+  const handleConfirmSubmission = async () => {
+    // Submit the current draft
     try {
-      const existingSubmissions = window.localStorage.getItem('nafra-submissions');
-      const submissions = existingSubmissions ? JSON.parse(existingSubmissions) : [];
-      submissions.push(submissionData);
-      window.localStorage.setItem('nafra-submissions', JSON.stringify(submissions));
+      const draftIdToSubmit = districtForm.id;
+      if (draftIdToSubmit) {
+        await dispatch(submitDraft(draftIdToSubmit)).unwrap();
+      }
 
-      // Clear current districts
-      dispatch(setDistricts([]));
+      // ONLY close modal and update state on success
+      setShowConfirmModal(false);
 
       // Show success message
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
+      dispatch(triggerSuccessMessage());
 
-      // Hide submissions view and show empty state
-      setShowSubmissions(false);
+      // Note: We don't delete the draft because:
+      // 1. The submission has a foreign key reference to it (for audit trail)
+      // 2. The draft status is already updated to 'submitted' by the backend
+      // 3. Submitted drafts are filtered out from the drafts list
+
+      // Refresh drafts list and go to history
+      dispatch(fetchDrafts());
+      handleViewSubmissions();
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error saving submission:', error);
-      dispatch(setFormError('Failed to save submission. Please try again.'));
+      console.error('Error submitting draft:', error);
+      dispatch(setFormError('Failed to submit draft. Please try again.'));
     }
   };
 
   // Handler to cancel submission
   const handleCancelSubmission = () => {
     setShowConfirmModal(false);
-  };
-
-  // Handler to go back from submissions view
-  const handleBackToForm = () => {
-    setShowSubmissions(false);
   };
 
   // Handler for viewing submission data
@@ -1030,28 +878,51 @@ export default function NafraDataForm() {
 
             <p>Please carefully fill out the form below to submit your data.</p>
           </div>
+
           {/* Success Message */}
-          {showSuccessMessage && (
+          {isSuccessMessageVisible && (
             <div className="success-message">
-              ✓ Data submitted successfully!
+              <p>Action completed successfully!</p>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => dispatch(hideSuccessMessage())}
+              >
+                ×
+              </button>
             </div>
           )}
-          <div className="nafra-form-input-fields">
-            {!showSubmissions && <p>Add District of Operation</p>}
-            {!showSubmissions && (
-              <button className="add-row-btn" type="button" onClick={handleOpenModal}>+ Add District</button>
-            )}
-            <button className="view-submissions-btn" type="button" onClick={showSubmissions ? handleBackToForm : handleViewSubmissions}>
-              {showSubmissions ? '← Back to Form' : 'View Previous Submissions'}
+          {formError || draftsError ? (
+            <div className="error-message-global" role="alert">
+              <span className="error-icon">⚠</span>
+              <span className="error-text">{formError || draftsError}</span>
+            </div>
+          ) : null}
+
+          {/* New Tabbed Toggle UI */}
+          <div className="nafra-form-tabs">
+            <button
+              className={`tab-btn ${viewTab === 'active' ? 'active' : ''}`}
+              onClick={() => setViewTab('active')}
+              type="button"
+            >
+              My Record
             </button>
-            {showSubmissions && (
-              <button className="login-prev" type="button" onClick={handleLogout}>
-                Logout
-              </button>
-            )}
+            <button
+              className={`tab-btn ${viewTab === 'submissions' ? 'active' : ''}`}
+              onClick={() => {
+                setViewTab('submissions');
+                handleViewSubmissions();
+              }}
+              type="button"
+            >
+              History
+            </button>
+            <button className="add-row-btn" type="button" onClick={handleOpenModal}>+ Add District</button>
+
           </div>
           <div className="nafra-form-data-collected">
-            {showSubmissions ? (
+            {viewTab === 'submissions' && (
               <>
                 <div className="nafra-form-data-collected-header">
                   <span>Previous Submissions</span>
@@ -1094,16 +965,21 @@ export default function NafraDataForm() {
                   )}
                 </ul>
               </>
-            ) : (
+            )}
+
+            {viewTab === 'active' && (
               <>
+                {/* Active Workspace */}
                 <div className="nafra-form-data-collected-header">
-                  <span>District Added</span>
+                  <span>
+                    Districts Record
+                  </span>
                   <span className="actions-title">Actions</span>
                 </div>
                 <ul
                   className="nafra-form-data-collected-body"
                   style={
-                    districts.length > MAX_VISIBLE_DISTRICTS
+                    (districtForm.data?.districts?.length || 0) > MAX_VISIBLE_DISTRICTS
                       ? {
                         maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
                         overflowY: 'auto',
@@ -1112,39 +988,41 @@ export default function NafraDataForm() {
                       : undefined
                   }
                 >
-                  {districts.map((district) => (
-                    <li key={district.id} className="district-row">
-                      <span className="district-name">{district.name}</span>
-                      <div className="district-actions">
-                        <button className="btn-a-icon" type="button" title="Edit" onClick={() => handleEditDistrict(district)}>
-                          <EditIcon className="edit-icon" />
-                        </button>
-                        <button className="btn-a-icon" type="button" title="Delete" onClick={() => handleDeleteDistrict(district)}>
-                          <DeleteIcon className="delete-icon" />
-                        </button>
-                        <button className="btn-a-icon" type="button" title="Preview" onClick={() => handleViewDistrict(district)}>
-                          <EyeIcon className="view-icon" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                  {(districtForm.data?.districts?.length || 0) > 0 ? (
+                    districtForm.data.districts.map((district) => (
+                      <li key={district.id} className="district-row">
+                        <span className="district-name">{district.name}</span>
+                        <div className="district-actions">
+                          <button className="btn-a-icon" type="button" title="Edit" onClick={() => handleEditDistrict(district)}>
+                            <EditIcon className="edit-icon" />
+                          </button>
+                          <button className="btn-a-icon" type="button" title="Delete" onClick={() => handleDeleteDistrict(district)}>
+                            <DeleteIcon className="delete-icon" />
+                          </button>
+                          <button className="btn-a-icon" type="button" title="Preview" onClick={() => handleViewDistrict(district)}>
+                            <EyeIcon className="view-icon" />
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="no-submissions">No districts added yet. Click &quot;+ Add District&quot; to start.</li>
+                  )}
                 </ul>
+
+                <div className="form-view-buttons">
+                  {(districtForm.data?.districts?.length || 0) > 0 && (
+                    <button className="submit-button" type="button" onClick={handleSubmit}>
+                      Submit Record
+                    </button>
+                  )}
+                  <button className="login-prev" type="button" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </div>
               </>
             )}
           </div>
-          <div className="form-view-buttons">
-            {!showSubmissions && (
-              <button className="submit-button" type="button" onClick={handleSubmit}>
-                Submit
-              </button>
-            )}
-            {!showSubmissions && (
-              <button className="form-view-logout" type="button" onClick={handleLogout}>
-                Logout
-              </button>
-            )}
-          </div>
-
         </div>
       </div>
       {isModalOpen ? (
@@ -1175,14 +1053,14 @@ export default function NafraDataForm() {
                       aria-describedby="district-select-error"
                     >
                       <option value="">Select a district</option>
-                      {DISTRICT_OPTIONS.map((option) => (
+                      {districtOptions.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
                       ))}
                     </select>
                   </FormLabel>
-                  <FieldError id="district-select-error" message={districtErrors.district} />
+                  <FieldError id="district-select-error" message={formError} />
                 </div>
                 {districtForm.district === 'custom' ? (
                   <div className="form-field">
@@ -1197,7 +1075,7 @@ export default function NafraDataForm() {
                         required
                       />
                     </FormLabel>
-                    <FieldError id="district-custom-error" message={districtErrors.customDistrict} />
+                    <FieldError id="district-custom-error" message={formError} />
                   </div>
                 ) : null}
               </section>
@@ -1214,9 +1092,13 @@ export default function NafraDataForm() {
                   </button>
                 </div>
                 <div className="chiefdom-grid">
-                  {districtForm.chiefdoms.map((chiefdom, index) => {
-                    const chiefdomOptions = DISTRICT_CHIEFDOMS[districtForm.district] || [];
-                    const cdomEr = chiefdom.validationErrors || crChfValSt(chiefdom.fertilizers);
+                  {(districtForm.chiefdoms || []).map((chiefdom, index) => {
+                    const chiefdomOptions = getChiefdomOptions(
+                      referenceChiefdoms,
+                      districtForm.district,
+                    );
+                    const cdomEr = chiefdom.validationErrors
+                      || createChiefdomValidationState(chiefdom.fertilizers);
                     const chiefdomNameErrorId = `chiefdom-name-error-${chiefdom.id}`;
                     return (
                       <div key={chiefdom.id} className="chiefdom-card" aria-expanded={!chiefdom.isCollapsed}>
@@ -1251,7 +1133,7 @@ export default function NafraDataForm() {
                             <p>
                               <strong>Name:</strong>
                               {' '}
-                              {getChiefdomDisplayName(chiefdom)}
+                              {getChiefdomDisplayName(chiefdom, referenceChiefdoms)}
                             </p>
                             <p>
                               <strong>Fertilizers:</strong>
@@ -1268,16 +1150,16 @@ export default function NafraDataForm() {
                               >
                                 <select
                                   id={`chiefdom-select-${chiefdom.id}`}
-                                  value={chiefdom.useCustomName ? 'custom' : chiefdom.name}
+                                  value={chiefdom.useCustomName ? 'custom' : (chiefdom.name || '')}
                                   onChange={(event) => hdlChfSlct(chiefdom.id, event.target.value)}
                                   disabled={!districtForm.district}
                                   aria-invalid={Boolean(cdomEr.name)}
                                   aria-describedby={cdomEr.name ? chiefdomNameErrorId : undefined}
                                 >
                                   <option value="">Select a chiefdom</option>
-                                  {chiefdomOptions.map((name) => (
-                                    <option key={name} value={name}>
-                                      {name}
+                                  {chiefdomOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
                                     </option>
                                   ))}
                                   <option value="custom">Other / Not listed</option>
@@ -1324,7 +1206,8 @@ export default function NafraDataForm() {
                             </div>
                             <div className="fertilizer-list">
                               {chiefdom.fertilizers.map((fertilizer) => {
-                                const ftEr = cdomEr.fertilizers[fertilizer.id] || crFertValSt();
+                                const ftEr = cdomEr.fertilizers[fertilizer.id]
+                                  || createFertilizerValidationState();
                                 const FNameErrorId = `fert-name-error-${fertilizer.id}`;
                                 return (
                                   <div key={fertilizer.id} className="fertilizer-row">
@@ -1345,7 +1228,7 @@ export default function NafraDataForm() {
                                           aria-describedby={ftEr.name ? FNameErrorId : undefined}
                                         >
                                           <option value="">Select fertilizer</option>
-                                          {FERTILIZER_OPTIONS.map((name) => (
+                                          {fertilizerOptions.map((name) => (
                                             <option key={name} value={name}>
                                               {name}
                                             </option>
@@ -1395,10 +1278,8 @@ export default function NafraDataForm() {
                                         htmlFor={`dealership-${fertilizer.id}`}
                                         label="Fertilizer Dealership Name"
                                       >
-                                        <input
+                                        <select
                                           id={`dealership-${fertilizer.id}`}
-                                          type="text"
-                                          placeholder="e.g. Sunrise Agro Dealers"
                                           value={fertilizer.dealership}
                                           onChange={(event) => handleFertilizerFieldChange(
                                             chiefdom.id,
@@ -1408,8 +1289,18 @@ export default function NafraDataForm() {
                                           )}
                                           aria-invalid={Boolean(ftEr.dealership)}
                                           aria-describedby={ftEr.dealership ? `dealership-error-${fertilizer.id}` : undefined}
-                                          required
-                                        />
+                                        >
+                                          <option value="">Select a dealer</option>
+                                          {dealerOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.label}
+                                              {' '}
+                                              (
+                                              {option.licenseNumber}
+                                              )
+                                            </option>
+                                          ))}
+                                        </select>
                                       </FormLabel>
                                       <FieldError
                                         id={`dealership-error-${fertilizer.id}`}
@@ -1518,20 +1409,20 @@ export default function NafraDataForm() {
                 <span>
                   25kg Bags:
                   {' '}
-                  <strong>{bagTotals.total25}</strong>
+                  <strong>{modalBagTotals.total25}</strong>
                 </span>
                 <span>
                   50kg Bags:
                   {' '}
-                  <strong>{bagTotals.total50}</strong>
+                  <strong>{modalBagTotals.total50}</strong>
                 </span>
               </div>
               <div className="modal-footer-actions">
                 <button type="button" className="secondary-btn" onClick={handleCloseModal}>
                   Cancel
                 </button>
-                <button type="button" className="primary-btn" onClick={handleSaveDistrictPlan}>
-                  Save District Data
+                <button type="button" className="primary-btn" onClick={handleSaveDistrictPlan} disabled={isLoadingDrafts}>
+                  {isLoadingDrafts ? 'Saving...' : 'Save District Data'}
                 </button>
               </div>
             </div>
@@ -1540,23 +1431,23 @@ export default function NafraDataForm() {
       ) : null}
 
       {/* District Action Modals */}
-      {viewModalDistrict && (
+      {viewModalDraft && (
         <DistrictViewModal
-          district={viewModalDistrict}
+          district={viewModalDraft}
           onClose={handleCloseViewModal}
         />
       )}
 
-      {editModalDistrict && (
+      {editModalDraft && (
         <DistrictEditModal
-          district={editModalDistrict}
+          district={editModalDraft}
           onClose={handleCloseEditModal}
         />
       )}
 
-      {deleteModalDistrict && (
+      {deleteModalDraft && (
         <DistrictDeleteModal
-          district={deleteModalDistrict}
+          district={deleteModalDraft}
           onClose={handleCloseDeleteModal}
         />
       )}
@@ -1580,7 +1471,7 @@ export default function NafraDataForm() {
               <p>Are you sure you want to submit the collected data?</p>
               <p>
                 This will submit
-                {districts.length}
+                {districtForm.data?.districts?.length || 0}
                 {' '}
                 district(s)
               </p>
@@ -1597,8 +1488,9 @@ export default function NafraDataForm() {
                 type="button"
                 className="primary-btn"
                 onClick={handleConfirmSubmission}
+                disabled={isLoadingDrafts}
               >
-                Confirm Submit
+                {isLoadingDrafts ? 'Submitting...' : 'Confirm Submit'}
               </button>
             </div>
           </div>

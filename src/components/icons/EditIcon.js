@@ -1,6 +1,7 @@
+/* eslint-disable react/require-default-props */
 import PropTypes from 'prop-types';
 
-export default function EditIcon({ className }) {
+export default function EditIcon({ className = '' }) {
   return (
     <svg
       className={className}
@@ -30,8 +31,4 @@ export default function EditIcon({ className }) {
 
 EditIcon.propTypes = {
   className: PropTypes.string,
-};
-
-EditIcon.defaultProps = {
-  className: '',
 };

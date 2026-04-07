@@ -1,70 +1,71 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import {
-  Shield,
-  Pencil,
-  Trash2,
-  X,
-  Plus,
+  Shield, Pencil, Trash2, X, Plus,
 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { InputField } from '../../ui/form-elements';
+import { useListUsersQuery } from '../../../app/api/apiSlice';
 
-const AdminCard = ({ admin }) => (
-  <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-start space-x-4 mb-6">
-      <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
-        <Shield className="h-6 w-6" />
+const AdminCard = ({ admin }) => {
+  const joinedDate = admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'N/A';
+
+  return (
+    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start space-x-4 mb-6">
+        <div className="h-12 w-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+          <Shield className="h-6 w-6" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-900">{admin.name}</h3>
+            <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full capitalize">
+              {admin.role}
+            </span>
+          </div>
+          <div className="mt-4 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                Email
+              </p>
+              <p className="text-sm font-medium text-gray-900">{admin.email}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                Joined
+              </p>
+              <p className="text-sm font-medium text-gray-900">{joinedDate}</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div>
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-bold text-gray-900">{admin.name}</h3>
-          <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
-            {admin.role}
-          </span>
-        </div>
-        <div className="mt-4 space-y-4">
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Email
-            </p>
-            <p className="text-sm font-medium text-gray-900">{admin.email}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              Created
-            </p>
-            <p className="text-sm font-medium text-gray-900">{admin.created}</p>
-          </div>
-        </div>
+
+      <div className="flex gap-3 pt-6 border-t border-gray-100">
+        <button
+          type="button"
+          className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+        >
+          <Pencil className="mr-2 h-4 w-4" />
+          Edit
+        </button>
+        <button
+          type="button"
+          className="flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
-
-    <div className="flex gap-3 pt-6 border-t border-gray-100">
-      <button
-        type="button"
-        className="flex-1 flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-      >
-        <Pencil className="mr-2 h-4 w-4" />
-        Edit
-      </button>
-      <button
-        type="button"
-        className="flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 AdminCard.propTypes = {
   admin: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     name: PropTypes.string.isRequired,
-    role: PropTypes.string.isRequired,
     email: PropTypes.string.isRequired,
-    created: PropTypes.string.isRequired,
+    role: PropTypes.string.isRequired,
+    created_at: PropTypes.string,
   }).isRequired,
 };
 
@@ -124,30 +125,16 @@ CreateAdminModal.propTypes = {
 
 const AdminsView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: users, isLoading, error } = useListUsersQuery();
 
-  const admins = [
-    {
-      id: 1,
-      name: 'Admin User',
-      role: 'admin',
-      email: 'admin@example.com',
-      created: '2026-01-15',
-    },
-    {
-      id: 2,
-      name: 'Super Admin',
-      role: 'admin',
-      email: 'superadmin@example.com',
-      created: '2026-01-10',
-    },
-  ];
+  const admins = (users || []).filter((u) => u.role === 'admin');
 
   return (
     <div className="max-w-7xl mx-auto px-8 py-8">
       <header className="flex justify-between items-start mb-8">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Manage Admins</h2>
-          <p className="text-gray-500 mt-2">Create and manage administrator accounts</p>
+          <p className="text-gray-500 mt-2">View and manage system administrators</p>
         </div>
         <Button
           className="bg-gray-900 hover:bg-gray-800 text-white"
@@ -158,11 +145,28 @@ const AdminsView = () => {
         </Button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {admins.map((admin) => (
-          <AdminCard key={admin.id} admin={admin} />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+        </div>
+      )}
+      {error && !isLoading && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-100 text-center">
+          Failed to load administrators. Please try again.
+        </div>
+      )}
+      {!isLoading && !error && admins.length === 0 && (
+        <div className="bg-white border border-dashed border-gray-200 rounded-xl py-20 text-center text-gray-400">
+          <p className="text-lg">No administrators found.</p>
+        </div>
+      )}
+      {!isLoading && !error && admins.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {admins.map((admin) => (
+            <AdminCard key={admin.id} admin={admin} />
+          ))}
+        </div>
+      )}
 
       <CreateAdminModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>

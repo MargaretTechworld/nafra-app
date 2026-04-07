@@ -18,10 +18,16 @@ export const CustomSelect = ({
           onChange={onChange}
           className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2 px-3 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-gray-500 transition-colors"
         >
-          <option value="" disabled hidden>{placeholder}</option>
-          {options.map((option) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
+          {placeholder && <option value="">{placeholder}</option>}
+          {options.map((option) => {
+            const optValue = typeof option === 'object' ? option.value : option;
+            const optLabel = typeof option === 'object' ? option.label : option;
+            return (
+              <option key={optValue} value={optValue}>
+                {optLabel}
+              </option>
+            );
+          })}
         </select>
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
           <ChevronDown className="h-4 w-4" />
@@ -34,8 +40,13 @@ export const CustomSelect = ({
 CustomSelect.propTypes = {
   label: PropTypes.string.isRequired,
   placeholder: PropTypes.string.isRequired,
-  options: PropTypes.arrayOf(PropTypes.string).isRequired,
-  value: PropTypes.string.isRequired,
+  options: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.string, PropTypes.shape({
+      value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      label: PropTypes.string,
+    })]),
+  ).isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onChange: PropTypes.func.isRequired,
 };
 
