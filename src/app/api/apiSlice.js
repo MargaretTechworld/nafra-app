@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { logOut } from '../../features/auth/authSlice';
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'http://localhost:3000/api',
+  baseUrl: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api',
   credentials: 'include',
   prepareHeaders: (headers, { getState }) => {
     const { token } = getState().auth;
@@ -91,6 +91,7 @@ const apiSlice = createApi({
         url: '/submissions',
         params,
       }),
+      providesTags: ['Submissions'],
     }),
     createSubmission: builder.mutation({
       query: (submissionData) => ({
@@ -98,35 +99,51 @@ const apiSlice = createApi({
         method: 'POST',
         body: submissionData,
       }),
+      invalidatesTags: ['Submissions'],
+    }),
+    deleteSubmission: builder.mutation({
+      query: (id) => ({
+        url: `/submissions/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Submissions'],
     }),
 
     // Analytics Endpoints
     bagsByDistrict: builder.query({
       query: () => '/admin/analytics/bags-by-district',
+      providesTags: ['Submissions'],
     }),
     bagsByAgency: builder.query({
       query: () => '/admin/analytics/bags-by-agency',
+      providesTags: ['Submissions'],
     }),
     bagsByFertilizer: builder.query({
       query: () => '/admin/analytics/bags-by-fertilizer',
+      providesTags: ['Submissions'],
     }),
     agencyDistrictDistribution: builder.query({
       query: ({ agencyId, districtId }) => ({
         url: '/admin/analytics/agency-district-distribution',
         params: { agency_id: agencyId, district_id: districtId },
       }),
+      providesTags: ['Submissions'],
     }),
     dealersByRegion: builder.query({
       query: () => '/admin/analytics/dealers-by-region',
+      providesTags: ['Dealers'],
     }),
     dealersByDistrict: builder.query({
       query: () => '/admin/analytics/dealers-by-district',
+      providesTags: ['Dealers'],
     }),
     licenseStatusSummary: builder.query({
       query: () => '/admin/analytics/license-status-summary',
+      providesTags: ['Dealers', 'Submissions'],
     }),
     dealerOperationalCoverage: builder.query({
       query: () => '/admin/analytics/dealer-operational-coverage',
+      providesTags: ['Dealers'],
     }),
 
     // Reference Data Endpoints
@@ -156,6 +173,10 @@ const apiSlice = createApi({
         method: 'DELETE',
       }),
       invalidatesTags: ['Districts'],
+    }),
+    getDistricts: builder.query({
+      query: () => '/districts',
+      providesTags: ['Districts'],
     }),
     getChiefdoms: builder.query({
       query: (districtId) => ({
@@ -250,36 +271,6 @@ const apiSlice = createApi({
       }),
       invalidatesTags: ['Regions'],
     }),
-    getTownships: builder.query({
-      query: () => '/townships',
-    }),
-    adminGetTownships: builder.query({
-      query: () => '/admin/townships',
-      providesTags: ['Townships'],
-    }),
-    adminCreateTownship: builder.mutation({
-      query: (townshipData) => ({
-        url: '/admin/townships',
-        method: 'POST',
-        body: { township: townshipData },
-      }),
-      invalidatesTags: ['Townships'],
-    }),
-    adminUpdateTownship: builder.mutation({
-      query: ({ id, ...townshipData }) => ({
-        url: `/admin/townships/${id}`,
-        method: 'PUT',
-        body: { township: townshipData },
-      }),
-      invalidatesTags: ['Townships'],
-    }),
-    adminDeleteTownship: builder.mutation({
-      query: (id) => ({
-        url: `/admin/townships/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Townships'],
-    }),
     getDealers: builder.query({
       query: () => '/dealers',
     }),
@@ -360,6 +351,7 @@ export const {
   useCreateAgencyMutation,
   useListSubmissionsQuery,
   useCreateSubmissionMutation,
+  useDeleteSubmissionMutation,
   useBagsByDistrictQuery,
   useBagsByAgencyQuery,
   useBagsByFertilizerQuery,

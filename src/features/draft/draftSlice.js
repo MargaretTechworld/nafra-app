@@ -353,7 +353,7 @@ const draftSlice = createSlice({
     },
     addDistrict: (state, action) => {
       if (state.districtForm.data) {
-        state.districtForm.data.districts.push(action.payload);
+        state.districtForm.data.districts.unshift(action.payload);
       }
     },
     updateDistrict: (state, action) => {
@@ -385,9 +385,13 @@ const draftSlice = createSlice({
       })
       .addCase(saveDraft.fulfilled, (state, action) => {
         state.isLoadingDrafts = false;
-        if (!state.districtForm.id) {
+        // Update the form with the latest data from the server
+        if (action.payload) {
           state.districtForm.id = action.payload.id;
+          state.districtForm.title = action.payload.title;
+          state.districtForm.data = action.payload.data || { districts: [] };
         }
+
         // Only show success message if it's NOT an auto-save
         if (!action.meta.arg.isAutoSave) {
           state.isSuccessMessageVisible = true;

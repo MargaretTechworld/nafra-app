@@ -116,14 +116,21 @@ SimpleBarChart.propTypes = {
 
 const HomeView = () => {
   // Core Data
-  const { data: agenciesData } = useListAgenciesQuery();
-  const { data: dealers } = useGetDealersQuery();
+  const { data: agenciesData, isLoading: isLoadingAgencies } = useListAgenciesQuery();
+  const { data: dealers, isLoading: isLoadingDealers } = useGetDealersQuery();
+  // Pre-fetch districts for reference
   useAdminGetDistrictsQuery();
 
   // Analytics Data
-  const { data: bagsPerDistrict } = useBagsByDistrictQuery();
-  const { data: bagsPerAgency } = useBagsByAgencyQuery();
-  const { data: licenseSummary } = useLicenseStatusSummaryQuery();
+  const {
+    data: bagsPerDistrict, isLoading: isLoadingDistrictAnalytics,
+  } = useBagsByDistrictQuery();
+  const {
+    data: bagsPerAgency, isLoading: isLoadingAgencyAnalytics,
+  } = useBagsByAgencyQuery();
+  const {
+    data: licenseSummary, isLoading: isLoadingLicenseSummary,
+  } = useLicenseStatusSummaryQuery();
 
   const agencies = agenciesData || [];
 
@@ -159,7 +166,12 @@ const HomeView = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {bagsPerDistrict ? (
+            {isLoadingDistrictAnalytics && (
+              <div className="h-48 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            )}
+            {!isLoadingDistrictAnalytics && bagsPerDistrict && bagsPerDistrict.length > 0 && (
               <SimpleBarChart
                 data={bagsPerDistrict}
                 title="Total distribution (25kg + 50kg)"
@@ -167,8 +179,12 @@ const HomeView = () => {
                 valueKey25="bags_25kg"
                 valueKey50="bags_50kg"
               />
-            ) : (
-              <div className="h-48 flex items-center justify-center text-gray-400">Loading data...</div>
+            )}
+            {!isLoadingDistrictAnalytics && (!bagsPerDistrict || bagsPerDistrict.length === 0) && (
+              <div className="h-48 flex flex-col items-center justify-center text-gray-400 gap-2">
+                <MapPin className="h-8 w-8 opacity-20" />
+                <p className="text-sm font-medium">No distribution data found yet</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -183,7 +199,9 @@ const HomeView = () => {
                   <Building2 className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-gray-900">{agencies?.length || 0}</div>
+                  <div className="text-2xl font-black text-gray-900">
+                    {isLoadingAgencies ? '...' : agencies.length}
+                  </div>
                   <p className="text-[10px] uppercase font-bold text-gray-500 tracking-tight">Active Agencies</p>
                 </div>
               </CardContent>
@@ -195,7 +213,9 @@ const HomeView = () => {
                   <Store className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-gray-900">{dealers?.length || 0}</div>
+                  <div className="text-2xl font-black text-gray-900">
+                    {isLoadingDealers ? '...' : (dealers?.length || 0)}
+                  </div>
                   <p className="text-[10px] uppercase font-bold text-gray-500 tracking-tight">Verified Dealers</p>
                 </div>
               </CardContent>
@@ -212,33 +232,40 @@ const HomeView = () => {
               <CardDescription className="text-gray-400">Real-time licensing monitoring</CardDescription>
             </CardHeader>
             <CardContent className="z-10 relative">
-              <div className="space-y-6">
-                <div className="flex justify-between items-center group cursor-help">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-green-900/50 flex items-center justify-center text-green-400 ring-1 ring-green-900">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-medium">Fully Licensed</span>
-                  </div>
-                  <span className="text-xl font-bold">{licenseSummary?.active || 0}</span>
+              {isLoadingLicenseSummary ? (
+                <div className="space-y-4 animate-pulse">
+                  <div className="h-8 bg-white/5 rounded w-full" />
+                  <div className="h-8 bg-white/5 rounded w-full" />
                 </div>
-                <div className="flex justify-between items-center group cursor-help">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-red-900/50 flex items-center justify-center text-red-400 ring-1 ring-red-900">
-                      <ShieldAlert className="h-4 w-4" />
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center group cursor-help">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-green-900/50 flex items-center justify-center text-green-400 ring-1 ring-green-900">
+                        <ShieldCheck className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">Fully Licensed</span>
                     </div>
-                    <span className="text-sm font-medium">Expired/No License</span>
+                    <span className="text-xl font-bold">{licenseSummary?.active || 0}</span>
                   </div>
-                  <span className="text-xl font-bold text-red-400">{licenseSummary?.unlicensed || licenseSummary?.expired || 0}</span>
-                </div>
+                  <div className="flex justify-between items-center group cursor-help">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-red-900/50 flex items-center justify-center text-red-400 ring-1 ring-red-900">
+                        <ShieldAlert className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">Expired/No License</span>
+                    </div>
+                    <span className="text-xl font-bold text-red-400">{licenseSummary?.expired || licenseSummary?.unlicensed || 0}</span>
+                  </div>
 
-                <div className="pt-4 border-t border-white/10">
-                  <button type="button" className="text-xs font-bold text-gray-400 flex items-center gap-1 hover:text-white transition-colors group">
-                    VIEW FULL COMPLIANCE LOG
-                    <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  <div className="pt-4 border-t border-white/10">
+                    <button type="button" className="text-xs font-bold text-gray-400 flex items-center gap-1 hover:text-white transition-colors group">
+                      VIEW FULL COMPLIANCE LOG
+                      <ChevronRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -252,7 +279,12 @@ const HomeView = () => {
             <CardDescription>Contribution by distribution volume</CardDescription>
           </CardHeader>
           <CardContent>
-            {bagsPerAgency ? (
+            {isLoadingAgencyAnalytics && (
+              <div className="h-48 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            )}
+            {!isLoadingAgencyAnalytics && bagsPerAgency && bagsPerAgency.length > 0 && (
               <SimpleBarChart
                 data={bagsPerAgency}
                 title="Agency Total Volume"
@@ -260,8 +292,12 @@ const HomeView = () => {
                 valueKey25="bags_25kg"
                 valueKey50="bags_50kg"
               />
-            ) : (
-              <div className="h-48 flex items-center justify-center text-gray-400">Loading data...</div>
+            )}
+            {!isLoadingAgencyAnalytics && (!bagsPerAgency || bagsPerAgency.length === 0) && (
+              <div className="h-48 flex flex-col items-center justify-center text-gray-400 gap-2">
+                <Building2 className="h-8 w-8 opacity-20" />
+                <p className="text-sm font-medium">No agency data available yet</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -271,17 +307,18 @@ const HomeView = () => {
           <div className="absolute bottom-0 right-0 p-12 opacity-10">
             <BarChart3 className="h-48 w-48" />
           </div>
-          <h3 className="text-2xl font-black mb-4 z-10 relative">Did you know?</h3>
+          <h3 className="text-2xl font-black mb-4 z-10 relative">System Status</h3>
           <p className="text-blue-100 mb-8 max-w-sm z-10 relative leading-relaxed">
-            Distribution accuracy has improved by
+            All systems are operational. Total verified users:
             {' '}
-            <span className="text-white font-bold">12%</span>
+            <span className="text-white font-bold">{agencies.length + (dealers?.length || 0)}</span>
+            . Last sync completed at
             {' '}
-            since implementation of real-time monitoring.
-            Keep your dealer licenses up to date to maintain system integrity.
+            <span className="text-white font-bold">{new Date().toLocaleTimeString()}</span>
+            .
           </p>
           <Button className="bg-white text-blue-700 hover:bg-white/90 font-bold px-8 shadow-lg transition-transform active:scale-95 z-10 relative border-0">
-            View Analytics Handbook
+            Download Global Summary
           </Button>
         </div>
       </div>

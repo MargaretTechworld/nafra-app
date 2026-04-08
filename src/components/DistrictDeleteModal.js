@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { removeDistrict, saveDraft, triggerSuccessMessage } from '../features/draft/draftSlice';
+import { saveDraft, triggerSuccessMessage } from '../features/draft/draftSlice';
 import { logOut } from '../features/auth/authSlice';
 import './styles/DistrictDeleteModal.css';
 
@@ -46,8 +46,7 @@ const DistrictDeleteModal = ({ district = null, onClose }) => {
     dispatch(saveDraft({ draftData, draftId: districtForm.id }))
       .unwrap()
       .then(() => {
-        // 3. Update local state ONLY on success
-        dispatch(removeDistrict(district.id));
+        // 3. Note: state is updated automatically via saveDraft.fulfilled extraReducer
         dispatch(triggerSuccessMessage());
         onClose();
       })

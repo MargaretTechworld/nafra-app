@@ -10,7 +10,6 @@ import {
   useGetDealersQuery,
 } from '../app/api/apiSlice';
 import {
-  updateDistrict,
   triggerSuccessMessage,
   saveDraft,
 } from '../features/draft/draftSlice';
@@ -633,34 +632,16 @@ const DistrictEditModal = ({ district, onClose }) => {
 
       const fertEntries = chiefdom.fertilizers.map((fert) => {
         const fertLabel = getfertNameValue(fert);
-        const entries = [];
 
-        // Correctly split consolidated row into separate entries for 25kg and 50kg
-        // This ensures stale bagSize/bagCount fields are cleared and edits are respected
-        const val25 = String(fert.bag25kg || '').trim();
-        if (val25 && Number(val25) > 0) {
-          entries.push({
-            id: uniqueId('fert'),
-            name: fertLabel,
-            dealership: (fert.dealership || '').trim(),
-            bagSize: '25',
-            bagCount: Number(val25),
-          });
-        }
-
-        const val50 = String(fert.bag50kg || '').trim();
-        if (val50 && Number(val50) > 0) {
-          entries.push({
-            id: uniqueId('fert'),
-            name: fertLabel,
-            dealership: (fert.dealership || '').trim(),
-            bagSize: '50',
-            bagCount: Number(val50),
-          });
-        }
-
-        return entries;
-      }).flat().filter(Boolean);
+        // Aggregate both bag sizes into a single object
+        return {
+          id: uniqueId('fert'),
+          name: fertLabel,
+          dealership: (fert.dealership || '').trim(),
+          bag25kg: Number(fert.bag25kg) || 0,
+          bag50kg: Number(fert.bag50kg) || 0,
+        };
+      }).filter(Boolean);
 
       return {
         name: chiefdomLabel,
@@ -678,10 +659,13 @@ const DistrictEditModal = ({ district, onClose }) => {
     };
 
     // 2. Prepare full draft data for backend save
-    // 2. Prepare full draft data for backend save
-    const updatedDistricts = districtForm.data.districts.map((d) => (
+    const currentDistricts = districtForm.data?.districts || [];
+    const updatedDistricts = currentDistricts.map((d) => (
       d.id === district.id ? { ...d, ...updatedDistrictData } : d
     ));
+
+    // If for some reason the district wasn't in the list (shouldn't happen for Edit),
+    // ensure it's at least present? No, Edit implies it exists.
 
     const draftData = {
       title: districtForm.title || `Draft - ${new Date().toLocaleDateString()}`,
@@ -697,8 +681,7 @@ const DistrictEditModal = ({ district, onClose }) => {
     dispatch(saveDraft({ draftData, draftId: districtForm.id }))
       .unwrap()
       .then(() => {
-        // 4. Update local state ONLY on success
-        dispatch(updateDistrict({ id: district.id, updatedData: updatedDistrictData }));
+        // 4. Note: state is updated automatically via saveDraft.fulfilled extraReducer
         dispatch(triggerSuccessMessage());
         onClose();
       })

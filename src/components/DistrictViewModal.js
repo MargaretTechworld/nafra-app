@@ -32,13 +32,18 @@ ${districtData.isSubmission ? `Submission Date: ${new Date(districtData.submissi
         if (!acc[key]) {
           acc[key] = {
             name: fert.name || fert.customName,
-            dealership: fert.dealership,
+            dealership: fert.dealership || 'Not specified',
             bag25kg: 0,
             bag50kg: 0,
           };
         }
-        if (fert.bagSize === '25') acc[key].bag25kg += Number(fert.bagCount) || 0;
-        if (fert.bagSize === '50') acc[key].bag50kg += Number(fert.bagCount) || 0;
+
+        // Handle various property name formats (Legacy, Frontend, and Backend)
+        const b25 = fert.bag25kg || fert.bags_25kg || (fert.bagSize === '25' ? fert.bagCount : 0) || 0;
+        const b50 = fert.bag50kg || fert.bags_50kg || (fert.bagSize === '50' ? fert.bagCount : 0) || 0;
+
+        acc[key].bag25kg += Number(b25);
+        acc[key].bag50kg += Number(b50);
         return acc;
       }, {}),
     );
@@ -89,13 +94,18 @@ ${districtData.isSubmission ? `Submission Date: ${new Date(districtData.submissi
       if (!acc[key]) {
         acc[key] = {
           name: fert.name || fert.customName,
-          dealership: fert.dealership,
+          dealership: fert.dealership || 'Not specified',
           bag25kg: 0,
           bag50kg: 0,
         };
       }
-      if (fert.bagSize === '25') acc[key].bag25kg += Number(fert.bagCount) || 0;
-      if (fert.bagSize === '50') acc[key].bag50kg += Number(fert.bagCount) || 0;
+
+      // Handle various property name formats (Legacy, Frontend, and Backend)
+      const b25 = fert.bag25kg || fert.bags_25kg || (fert.bagSize === '25' ? fert.bagCount : 0) || 0;
+      const b50 = fert.bag50kg || fert.bags_50kg || (fert.bagSize === '50' ? fert.bagCount : 0) || 0;
+
+      acc[key].bag25kg += Number(b25);
+      acc[key].bag50kg += Number(b50);
       return acc;
     }, {}),
   );

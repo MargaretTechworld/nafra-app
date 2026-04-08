@@ -15,6 +15,10 @@ import {
   MapPin,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
+  FlaskConical,
+  Store,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import {
@@ -26,6 +30,7 @@ import { CustomSelect } from '../../ui/form-elements';
 import {
   useListSubmissionsQuery,
   useListAgenciesQuery,
+  useDeleteSubmissionMutation,
 } from '../../../app/api/apiSlice';
 
 const SubmissionDetailModal = ({ isOpen, onClose, submission }) => {
@@ -46,8 +51,9 @@ const SubmissionDetailModal = ({ isOpen, onClose, submission }) => {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
-                  Audit Report #
-                  {submission.id}
+                  Audit Date:
+                  {' '}
+                  {submission.submitted_at?.split(' ')[0] || 'N/A'}
                 </h3>
                 <span className="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-black rounded-full uppercase">Verified Record</span>
               </div>
@@ -73,23 +79,31 @@ const SubmissionDetailModal = ({ isOpen, onClose, submission }) => {
           </button>
         </div>
 
-        {/* Info Bar */}
-        <div className="px-8 py-5 bg-blue-600 text-white flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Building2 className="h-5 w-5 opacity-80" />
+        {/* Info Bar with Gradient */}
+        <div className="px-8 py-6 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white flex justify-between items-center shadow-inner">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl ring-1 ring-white/20">
+              <Building2 className="h-6 w-6 text-blue-100" />
+            </div>
             <div>
-              <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest leading-none mb-1">Assigned Agency</p>
-              <p className="font-black text-lg">{submission.agency?.name || 'N/A'}</p>
+              <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em] leading-none mb-1.5 font-mono">Registry Master Agency</p>
+              <p className="font-black text-xl tracking-tight">{submission.agency?.name || 'N/A'}</p>
             </div>
           </div>
-          <div className="flex gap-8">
-            <div className="text-right">
-              <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest leading-none mb-1">Total 25kg</p>
-              <p className="font-black text-xl">{totalBags25kg}</p>
+          <div className="flex gap-6">
+            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl ring-1 ring-white/20 text-right min-w-[140px]">
+              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest leading-none mb-2">Total 25kg</p>
+              <div className="flex items-center justify-end gap-2">
+                <Package className="h-4 w-4 text-blue-200 opacity-60" />
+                <p className="font-black text-2xl">{totalBags25kg.toLocaleString()}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest leading-none mb-1">Total 50kg</p>
-              <p className="font-black text-xl">{totalBags50kg}</p>
+            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl ring-1 ring-white/20 text-right min-w-[140px]">
+              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest leading-none mb-2">Total 50kg</p>
+              <div className="flex items-center justify-end gap-2">
+                <Package className="h-4 w-4 text-blue-200 opacity-60" />
+                <p className="font-black text-2xl">{totalBags50kg.toLocaleString()}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -98,37 +112,57 @@ const SubmissionDetailModal = ({ isOpen, onClose, submission }) => {
         <div className="flex-1 overflow-y-auto p-8">
           <div className="mb-6">
             <h4 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Itemized Distribution Log</h4>
-            <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="border border-gray-100 rounded-3xl overflow-hidden shadow-2xl shadow-gray-200/50 bg-white">
               <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-[#1e293b] text-white">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Location (Chiefdom/Township)</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fertilizer Type</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">25kg Bags</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">50kg Bags</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-80">District</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Chiefdom</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Fertilizer Type</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Dealer / Dealership</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-right opacity-80">25kg Bags</th>
+                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-right opacity-80">50kg Bags</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {submission.submission_items?.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                  {Object.values((submission.submission_items || []).reduce((acc, item) => {
+                    const key = `${item.district?.id}-${item.chiefdom?.id}-${item.fertilizer?.id}-${item.dealer?.id}`;
+                    if (!acc[key]) {
+                      acc[key] = { ...item, bags_25kg: 0, bags_50kg: 0 };
+                    }
+                    acc[key].bags_25kg += Number(item.bags_25kg || 0);
+                    acc[key].bags_50kg += Number(item.bags_50kg || 0);
+                    return acc;
+                  }, {})).map((item) => (
+                    <tr key={`${item.id}-display`} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-bold text-gray-700">
+                          {item.district?.name || 'Unknown'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-3.5 w-3.5 text-blue-500" />
                           <span className="text-sm font-bold text-gray-700">
                             {item.chiefdom?.name || 'Unknown'}
-                            {item.township && (
-                              <span className="text-gray-400 font-medium ml-1">
-                                /
-                                {item.township.name}
-                              </span>
-                            )}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs font-black text-gray-600 bg-gray-100 px-2 py-1 rounded uppercase tracking-tighter">
-                          {item.fertilizer?.name || 'N/A'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <FlaskConical className="h-3.5 w-3.5 text-indigo-500" />
+                          <span className="text-xs font-black text-gray-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 uppercase tracking-tighter">
+                            {item.fertilizer?.name || 'N/A'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Store className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="text-sm font-bold text-gray-700 tracking-tight">
+                            {item.dealer?.name || 'Not specified'}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right font-mono text-sm font-bold text-blue-600">
                         {item.bags_25kg}
@@ -173,7 +207,6 @@ SubmissionDetailModal.propTypes = {
     submission_items: PropTypes.arrayOf(PropTypes.shape({
       id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
       chiefdom: PropTypes.shape({ name: PropTypes.string }),
-      township: PropTypes.shape({ name: PropTypes.string }),
       fertilizer: PropTypes.shape({ name: PropTypes.string }),
       bags_25kg: PropTypes.number,
       bags_50kg: PropTypes.number,
@@ -185,7 +218,81 @@ SubmissionDetailModal.defaultProps = {
   submission: null,
 };
 
-const SubmissionRow = ({ submission, onOpenReport }) => {
+const DeleteConfirmationModal = ({
+  isOpen, onClose, onConfirm, submission, isDeleting,
+}) => {
+  if (!isOpen || !submission) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-red-50">
+        <div className="p-8 text-center">
+          <div className="h-20 w-20 bg-red-50 text-red-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm ring-1 ring-red-100 animate-pulse">
+            <AlertTriangle className="h-10 w-10" />
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-2">Registry Override</h3>
+          <p className="text-gray-500 font-medium mb-8 leading-relaxed px-4">
+            You are about to execute a
+            {' '}
+            <span className="text-red-600 font-black">Permanent Erasure</span>
+            {' '}
+            of distribution record
+            {' '}
+            <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-md font-bold">
+              #
+              {submission.id}
+            </span>
+            . This cannot be reversed.
+          </p>
+
+          <div className="space-y-3">
+            <Button
+              variant="destructive"
+              className="w-full h-14 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl shadow-lg shadow-red-100 text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              onClick={onConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Eradicating...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-5 w-5" />
+                  Confirm Deletion
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full h-12 text-gray-400 font-bold hover:text-gray-900 transition-colors"
+              onClick={onClose}
+              disabled={isDeleting}
+            >
+              Retain Record
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+DeleteConfirmationModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+  submission: PropTypes.shape({ id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]) }),
+  isDeleting: PropTypes.bool,
+};
+
+DeleteConfirmationModal.defaultProps = {
+  submission: null,
+  isDeleting: false,
+};
+
+const SubmissionRow = ({ submission, onOpenReport, onDelete }) => {
   const v25 = Number(submission.total_bags_25kg) || 0;
   const v50 = Number(submission.total_bags_50kg) || 0;
   const totalBags = v25 + v50;
@@ -199,11 +306,11 @@ const SubmissionRow = ({ submission, onOpenReport }) => {
           </div>
           <div>
             <p className="text-sm font-black text-gray-900 leading-none mb-1">
-              Audit #
-              {submission.id}
+              {submission.submitted_at?.split(' ')[0] || 'N/A'}
             </p>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-              {submission.submitted_at?.split(' ')[0] || 'N/A'}
+              REPORT ID: #
+              {submission.id}
             </p>
           </div>
         </div>
@@ -253,14 +360,24 @@ const SubmissionRow = ({ submission, onOpenReport }) => {
         </div>
       </td>
       <td className="px-6 py-5 text-right">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 px-4 text-xs font-black text-blue-600 border-blue-100 bg-white hover:bg-blue-600 hover:text-white rounded-xl shadow-sm transition-all active:scale-95 border-b-2 border-blue-200 hover:border-blue-700"
-          onClick={() => onOpenReport(submission)}
-        >
-          View Full Report
-        </Button>
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-4 text-xs font-black text-blue-600 border-blue-100 bg-white hover:bg-blue-600 hover:text-white rounded-xl shadow-sm transition-all active:scale-95 border-b-2 border-blue-200 hover:border-blue-700"
+            onClick={() => onOpenReport(submission)}
+          >
+            View Full Report
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 w-9 p-0 flex items-center justify-center text-red-500 border-red-50 bg-red-50/30 hover:bg-red-500 hover:text-white rounded-xl shadow-sm transition-all active:scale-95 border-b-2 border-red-100 hover:border-red-600"
+            onClick={() => onDelete(submission)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
     </tr>
   );
@@ -276,11 +393,13 @@ SubmissionRow.propTypes = {
     total_bags_50kg: PropTypes.number,
   }).isRequired,
   onOpenReport: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
 };
 
 const SubmissionsView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [submissionToDelete, setSubmissionToDelete] = useState(null);
   const [filterAgency, setFilterAgency] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 15;
@@ -290,6 +409,8 @@ const SubmissionsView = () => {
     page,
     per_page: perPage,
   });
+
+  const [deleteSubmission, { isLoading: isDeleting }] = useDeleteSubmissionMutation();
 
   const { data: agenciesData } = useListAgenciesQuery();
   const agencies = agenciesData || [];
@@ -377,6 +498,7 @@ const SubmissionsView = () => {
                   key={submission.id}
                   submission={submission}
                   onOpenReport={(sub) => setSelectedReport(sub)}
+                  onDelete={(sub) => setSubmissionToDelete(sub)}
                 />
               ))}
             </tbody>
@@ -522,6 +644,23 @@ const SubmissionsView = () => {
         isOpen={!!selectedReport}
         onClose={() => setSelectedReport(null)}
         submission={selectedReport}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!submissionToDelete}
+        submission={submissionToDelete}
+        isDeleting={isDeleting}
+        onClose={() => setSubmissionToDelete(null)}
+        onConfirm={async () => {
+          try {
+            await deleteSubmission(submissionToDelete.id).unwrap();
+            setSubmissionToDelete(null);
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to delete submission:', err);
+          }
+        }}
       />
 
       {/* Modal for Direct Entry (Coming Soon) */}

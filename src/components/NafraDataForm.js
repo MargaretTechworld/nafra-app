@@ -1,11 +1,13 @@
-import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import './styles/NafraDataForm.css';
-import EditIcon from './icons/EditIcon';
-import DeleteIcon from './icons/DeleteIcon';
-import { EyeIcon } from './icons/EyeIcons';
+import Header from './Header';
+import NotificationSection from './NotificationSection';
+import TabNavigation from './TabNavigation';
+import RecordsList from './RecordsList';
+import ChiefdomCard from './ChiefdomCard';
+import { FormLabel, FieldError } from './ui/FormElements';
 import {
   fetchReferenceData,
   saveDraft,
@@ -15,7 +17,6 @@ import {
   closeModal,
   setDistrictForm,
   setFormError,
-  addDistrict,
   triggerSuccessMessage, // Added triggerSuccessMessage
   hideSuccessMessage,
   openViewModal,
@@ -30,11 +31,8 @@ import { logOut } from '../features/auth/authSlice';
 import DistrictViewModal from './DistrictViewModal';
 import DistrictEditModal from './DistrictEditModal';
 import DistrictDeleteModal from './DistrictDeleteModal';
-import logo from '../img/nafra-logo.png';
-import logo2 from '../img/logo3.png';
 import {
   getDistrictOptions,
-  getChiefdomOptions,
   getFertilizerOptions,
   getDealerOptions,
 } from '../constants/referenceData';
@@ -51,53 +49,11 @@ import {
   validateDistrictSelection,
   createFertilizerEntry,
   createChiefdomEntry,
-  getChiefdomDisplayName,
   hasDuplicateChiefdomName,
   hasDuplicateFertilizerName,
-  getChiefdomFertilizerSummary,
   validateChiefdomEntry,
   uniqueId,
-  createChiefdomValidationState,
-  createFertilizerValidationState,
 } from '../utils/formHelpers';
-
-const FieldError = ({ id = undefined, message = '' }) => {
-  if (!message) {
-    return null;
-  }
-
-  return (
-    <p className="field-error" id={id} role="status" aria-live="polite">
-      {message}
-    </p>
-  );
-};
-
-FieldError.propTypes = {
-  id: PropTypes.string,
-  message: PropTypes.string,
-};
-
-FieldError.defaultProps = {
-  id: undefined,
-  message: '',
-};
-
-const FormLabel = ({ children, htmlFor, label }) => (
-  <label className="form-label" htmlFor={htmlFor}>
-    <span className="form-label-text">{label}</span>
-    {children}
-  </label>
-);
-
-FormLabel.propTypes = {
-  children: PropTypes.node.isRequired,
-  htmlFor: PropTypes.string.isRequired,
-  label: PropTypes.string.isRequired,
-};
-
-const MAX_VISIBLE_DISTRICTS = 5;
-const DISTRICT_ROW_HEIGHT_PX = 72; // Approximate height of a district row
 
 export default function NafraDataForm() {
   const dispatch = useDispatch();
@@ -491,7 +447,7 @@ export default function NafraDataForm() {
           );
           updatedErrors = isDuplicate
             ? setFertilizerError(currentErrors, fertilizerId, 'name', DUPLICATE_ERRORS.fertilizer)
-            : clearFertilizerError(currentErrors, fertilizerId, 'name');
+            : clearFertilizerError(currentErrors, 'name');
         } else if (field === 'name') {
           updatedErrors = clearFertilizerError(currentErrors, fertilizerId, 'name');
         }
@@ -632,30 +588,14 @@ export default function NafraDataForm() {
               return null;
             }
 
-            // Create entries for each bag size with count > 0
-            const entries = [];
-
-            if (fertilizer.bag25kg && Number(fertilizer.bag25kg) > 0) {
-              entries.push({
-                name: FName,
-                dealership: fertilizer.dealership.trim(),
-                bagSize: '25',
-                bagCount: Number(fertilizer.bag25kg) || 0,
-              });
-            }
-
-            if (fertilizer.bag50kg && Number(fertilizer.bag50kg) > 0) {
-              entries.push({
-                name: FName,
-                dealership: fertilizer.dealership.trim(),
-                bagSize: '50',
-                bagCount: Number(fertilizer.bag50kg) || 0,
-              });
-            }
-
-            return entries;
+            // Aggregate both bag sizes into a single object
+            return {
+              name: FName,
+              dealership: fertilizer.dealership.trim(),
+              bag25kg: Number(fertilizer.bag25kg) || 0,
+              bag50kg: Number(fertilizer.bag50kg) || 0,
+            };
           })
-          .flat() // Flatten the array of entries
           .filter(Boolean);
 
         return {
@@ -699,8 +639,7 @@ export default function NafraDataForm() {
         // eslint-disable-next-line no-console
         console.log('Draft saved successfully');
 
-        // Update local state
-        dispatch(addDistrict(newDistrictRecord));
+        // Note: state is updated automatically via saveDraft.fulfilled extraReducer
         dispatch(triggerSuccessMessage());
         dispatch(closeModal());
       })
@@ -743,36 +682,46 @@ export default function NafraDataForm() {
       );
 
       // Map backend submission to frontend structure for viewing
-      const mappedSubmissions = sortedSubmissions.map((sub) => ({
-        id: sub.id,
-        submissionDate: sub.submitted_at,
-        districts: sub.submission_items ? Array.from(
-          new Set(sub.submission_items.map((item) => item.district?.name)),
-        ).map((name) => {
-          const districtItems = sub.submission_items.filter((item) => item.district?.name === name);
-          return {
-            name,
-            chiefdoms: Array.from(
-              new Set(districtItems.map((item) => item.chiefdom?.name)),
-            ).map((cName) => {
-              const chiefdomItems = districtItems.filter((item) => item.chiefdom?.name === cName);
-              return {
-                name: cName,
-                fertilizers: chiefdomItems.map((item) => ({
-                  name: item.fertilizer?.name,
-                  dealership: item.dealer?.name,
-                  bag25kg: item.bags_25kg,
-                  bag50kg: item.bags_50kg,
-                })),
-              };
-            }),
-          };
-        }) : [],
-        totals: {
-          total25: sub.total_bags_25kg,
-          total50: sub.total_bags_50kg,
-        },
-      }));
+      const mappedSubmissions = sortedSubmissions.map((sub) => {
+        const items = sub.submission_items || [];
+
+        // Group by District
+        const districtGroups = {};
+        items.forEach((item) => {
+          const dName = item.district?.name || 'Unknown District';
+          if (!districtGroups[dName]) {
+            districtGroups[dName] = { name: dName, chiefdoms: {} };
+          }
+
+          const cName = item.chiefdom?.name || 'Unknown Chiefdom';
+          if (!districtGroups[dName].chiefdoms[cName]) {
+            districtGroups[dName].chiefdoms[cName] = { name: cName, fertilizers: [] };
+          }
+
+          districtGroups[dName].chiefdoms[cName].fertilizers.push({
+            id: item.id,
+            name: item.fertilizer?.name || 'Unknown Fertilizer',
+            dealership: item.dealer?.name || 'Not specified',
+            bag25kg: Number(item.bags_25kg || 0),
+            bag50kg: Number(item.bags_50kg || 0),
+          });
+        });
+
+        const districts = Object.values(districtGroups).map((d) => ({
+          ...d,
+          chiefdoms: Object.values(d.chiefdoms),
+        }));
+
+        return {
+          id: sub.id,
+          submissionDate: sub.submitted_at,
+          districts,
+          totals: {
+            total25: Number(sub.total_bags_25kg || 0),
+            total50: Number(sub.total_bags_50kg || 0),
+          },
+        };
+      });
 
       setPreviousSubmissions(mappedSubmissions);
     } catch (error) {
@@ -829,26 +778,11 @@ export default function NafraDataForm() {
 
   // Handler for viewing submission data
   const handleViewSubmission = (submission) => {
-    // Create a proper structure that shows districts as groups
+    // The submission is already mapped correctly in handleViewSubmissions
     const districtForView = {
-      id: submission.id,
+      ...submission,
       name: `Submission from ${new Date(submission.submissionDate).toLocaleDateString()}`,
-      districts: submission.districts.map((district) => ({
-        ...district,
-        chiefdoms: district.chiefdoms.map((chiefdom) => ({
-          ...chiefdom,
-          fertilizers: chiefdom.fertilizers.map((fertilizer) => ({
-            ...fertilizer,
-            // Ensure bag25kg and bag50kg are properly set
-            bag25kg: fertilizer.bag25kg || 0,
-            bag50kg: fertilizer.bag50kg || 0,
-          })),
-        })),
-      })),
-      chiefdoms: [], // Empty chiefdoms array since we'll use districts
-      totals: submission.totals,
-      isSubmission: true, // Flag to indicate this is a submission
-      submissionDate: submission.submissionDate,
+      isSubmission: true,
     };
     dispatch(openViewModal(districtForView));
   };
@@ -856,173 +790,35 @@ export default function NafraDataForm() {
   return (
     <div className="nafra-data-form">
       <div className="form-content">
-        <div className="header">
-          <img className="form-logo" src={logo} alt="Logo" />
-          <div className="header-text">
-            <h1>National Fertilizer Regulatory Agency</h1>
-            <h1>&#40;Nafra&#41;</h1>
-            <p>Fertilizer Data Portal &#40;2025&#41; </p>
-          </div>
-          <img className="form-logo" src={logo2} alt="Logo" />
-        </div>
+        <Header />
         <div className="nafra-form-input-body" style={{ minHeight: '100vh' }}>
           <hr />
-          <div className="form-welcome-message">
-            <div className="welcome-login">
-              <h1>
-                Welcome,
-                {' '}
-                <span className="organization-name">Food Security Resilence Program &#40;FSRP&#41;</span>
-              </h1>
-            </div>
 
-            <p>Please carefully fill out the form below to submit your data.</p>
-          </div>
+          {/* Notifications area */}
+          <NotificationSection
+            isSuccessMessageVisible={isSuccessMessageVisible}
+            formError={formError}
+            draftsError={draftsError}
+            onHideSuccess={() => dispatch(hideSuccessMessage())}
+          />
 
-          {/* Success Message */}
-          {isSuccessMessageVisible && (
-            <div className="success-message">
-              <p>Action completed successfully!</p>
-              <button
-                type="button"
-                className="close-btn"
-                onClick={() => dispatch(hideSuccessMessage())}
-              >
-                ×
-              </button>
-            </div>
-          )}
-          {formError || draftsError ? (
-            <div className="error-message-global" role="alert">
-              <span className="error-icon">⚠</span>
-              <span className="error-text">{formError || draftsError}</span>
-            </div>
-          ) : null}
-
-          {/* New Tabbed Toggle UI */}
-          <div className="nafra-form-tabs">
-            <button
-              className={`tab-btn ${viewTab === 'active' ? 'active' : ''}`}
-              onClick={() => setViewTab('active')}
-              type="button"
-            >
-              My Record
-            </button>
-            <button
-              className={`tab-btn ${viewTab === 'submissions' ? 'active' : ''}`}
-              onClick={() => {
-                setViewTab('submissions');
-                handleViewSubmissions();
-              }}
-              type="button"
-            >
-              History
-            </button>
-            <button className="add-row-btn" type="button" onClick={handleOpenModal}>+ Add District</button>
-
-          </div>
-          <div className="nafra-form-data-collected">
-            {viewTab === 'submissions' && (
-              <>
-                <div className="nafra-form-data-collected-header">
-                  <span>Previous Submissions</span>
-                  <span className="actions-title">Actions</span>
-                </div>
-                <ul
-                  className="nafra-form-data-collected-body"
-                  style={
-                    previousSubmissions.length > MAX_VISIBLE_DISTRICTS
-                      ? {
-                        maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
-                        overflowY: 'auto',
-                        paddingRight: '4px',
-                      }
-                      : undefined
-                  }
-                >
-                  {previousSubmissions.length > 0 ? (
-                    previousSubmissions.map((submission) => (
-                      <li key={submission.id} className="submission-row">
-                        <span className="submission-date">
-                          Submitted on
-                          {' '}
-                          {new Date(submission.submissionDate).toLocaleDateString()}
-                        </span>
-                        <div className="submission-actions">
-                          <button
-                            className="btn-a-icon"
-                            type="button"
-                            title="View Submission"
-                            onClick={() => handleViewSubmission(submission)}
-                          >
-                            <EyeIcon className="view-icon" />
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="no-submissions">No previous submissions found</li>
-                  )}
-                </ul>
-              </>
-            )}
-
-            {viewTab === 'active' && (
-              <>
-                {/* Active Workspace */}
-                <div className="nafra-form-data-collected-header">
-                  <span>
-                    Districts Record
-                  </span>
-                  <span className="actions-title">Actions</span>
-                </div>
-                <ul
-                  className="nafra-form-data-collected-body"
-                  style={
-                    (districtForm.data?.districts?.length || 0) > MAX_VISIBLE_DISTRICTS
-                      ? {
-                        maxHeight: `${MAX_VISIBLE_DISTRICTS * DISTRICT_ROW_HEIGHT_PX}px`,
-                        overflowY: 'auto',
-                        paddingRight: '4px',
-                      }
-                      : undefined
-                  }
-                >
-                  {(districtForm.data?.districts?.length || 0) > 0 ? (
-                    districtForm.data.districts.map((district) => (
-                      <li key={district.id} className="district-row">
-                        <span className="district-name">{district.name}</span>
-                        <div className="district-actions">
-                          <button className="btn-a-icon" type="button" title="Edit" onClick={() => handleEditDistrict(district)}>
-                            <EditIcon className="edit-icon" />
-                          </button>
-                          <button className="btn-a-icon" type="button" title="Delete" onClick={() => handleDeleteDistrict(district)}>
-                            <DeleteIcon className="delete-icon" />
-                          </button>
-                          <button className="btn-a-icon" type="button" title="Preview" onClick={() => handleViewDistrict(district)}>
-                            <EyeIcon className="view-icon" />
-                          </button>
-                        </div>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="no-submissions">No districts added yet. Click &quot;+ Add District&quot; to start.</li>
-                  )}
-                </ul>
-
-                <div className="form-view-buttons">
-                  {(districtForm.data?.districts?.length || 0) > 0 && (
-                    <button className="submit-button" type="button" onClick={handleSubmit}>
-                      Submit Record
-                    </button>
-                  )}
-                  <button className="login-prev" type="button" onClick={handleLogout}>
-                    Logout
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <TabNavigation
+            viewTab={viewTab}
+            setViewTab={setViewTab}
+            onAddDistrict={handleOpenModal}
+            onViewSubmissions={handleViewSubmissions}
+          />
+          <RecordsList
+            viewTab={viewTab}
+            previousSubmissions={previousSubmissions}
+            districtForm={districtForm}
+            onViewSubmission={handleViewSubmission}
+            onEditDistrict={handleEditDistrict}
+            onDeleteDistrict={handleDeleteDistrict}
+            onViewDistrict={handleViewDistrict}
+            onSubmitRecord={handleSubmit}
+            onLogout={handleLogout}
+          />
         </div>
       </div>
       {isModalOpen ? (
@@ -1092,314 +888,25 @@ export default function NafraDataForm() {
                   </button>
                 </div>
                 <div className="chiefdom-grid">
-                  {(districtForm.chiefdoms || []).map((chiefdom, index) => {
-                    const chiefdomOptions = getChiefdomOptions(
-                      referenceChiefdoms,
-                      districtForm.district,
-                    );
-                    const cdomEr = chiefdom.validationErrors
-                      || createChiefdomValidationState(chiefdom.fertilizers);
-                    const chiefdomNameErrorId = `chiefdom-name-error-${chiefdom.id}`;
-                    return (
-                      <div key={chiefdom.id} className="chiefdom-card" aria-expanded={!chiefdom.isCollapsed}>
-                        <div className="chiefdom-card-header">
-                          <div className="chiefdom-card-header-info">
-                            <button
-                              type="button"
-                              className="collapse-toggle-btn"
-                              aria-label={chiefdom.isCollapsed ? 'Expand chiefdom' : 'Collapse chiefdom'}
-                              onClick={() => handleToggleChiefdomCollapse(chiefdom.id)}
-                            >
-                              <span className={`collapse-arrow ${chiefdom.isCollapsed ? '' : 'open'}`} />
-                            </button>
-                            <h5>
-                              Chiefdom
-                              {' '}
-                              {index + 1}
-                            </h5>
-                          </div>
-                          {districtForm.chiefdoms.length > 1 ? (
-                            <button
-                              type="button"
-                              className="remove-row-btn"
-                              onClick={() => handleRemoveChiefdom(chiefdom.id)}
-                            >
-                              Remove
-                            </button>
-                          ) : null}
-                        </div>
-                        {chiefdom.isCollapsed ? (
-                          <div className="chiefdom-summary">
-                            <p>
-                              <strong>Name:</strong>
-                              {' '}
-                              {getChiefdomDisplayName(chiefdom, referenceChiefdoms)}
-                            </p>
-                            <p>
-                              <strong>Fertilizers:</strong>
-                              {' '}
-                              {getChiefdomFertilizerSummary(chiefdom)}
-                            </p>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="form-field">
-                              <FormLabel
-                                htmlFor={`chiefdom-select-${chiefdom.id}`}
-                                label="Chiefdom Name"
-                              >
-                                <select
-                                  id={`chiefdom-select-${chiefdom.id}`}
-                                  value={chiefdom.useCustomName ? 'custom' : (chiefdom.name || '')}
-                                  onChange={(event) => hdlChfSlct(chiefdom.id, event.target.value)}
-                                  disabled={!districtForm.district}
-                                  aria-invalid={Boolean(cdomEr.name)}
-                                  aria-describedby={cdomEr.name ? chiefdomNameErrorId : undefined}
-                                >
-                                  <option value="">Select a chiefdom</option>
-                                  {chiefdomOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                  <option value="custom">Other / Not listed</option>
-                                </select>
-                              </FormLabel>
-                              {!chiefdom.useCustomName ? (
-                                <FieldError id={chiefdomNameErrorId} message={cdomEr.name} />
-                              ) : null}
-                            </div>
-                            {chiefdom.useCustomName ? (
-                              <div className="form-field">
-                                <FormLabel
-                                  htmlFor={`chiefdom-custom-${chiefdom.id}`}
-                                  label="Custom Chiefdom Name"
-                                >
-                                  <input
-                                    id={`chiefdom-custom-${chiefdom.id}`}
-                                    type="text"
-                                    placeholder="Enter chiefdom name"
-                                    value={chiefdom.customName}
-                                    onChange={(event) => handleChiefdomFieldChange(
-                                      chiefdom.id,
-                                      'customName',
-                                      event.target.value,
-                                    )}
-                                    aria-invalid={Boolean(cdomEr.name)}
-                                    aria-describedby={cdomEr.name ? chiefdomNameErrorId : undefined}
-                                    required
-                                  />
-                                </FormLabel>
-                                <FieldError id={chiefdomNameErrorId} message={cdomEr.name} />
-                              </div>
-                            ) : null}
-
-                            <div className="chiefdom-card-subheader">
-                              <h6>Fertilizer Information</h6>
-                              <button
-                                type="button"
-                                className="link-btn"
-                                onClick={() => handleAddFertilizer(chiefdom.id)}
-                              >
-                                + Add Fertilizer Type
-                              </button>
-                            </div>
-                            <div className="fertilizer-list">
-                              {chiefdom.fertilizers.map((fertilizer) => {
-                                const ftEr = cdomEr.fertilizers[fertilizer.id]
-                                  || createFertilizerValidationState();
-                                const FNameErrorId = `fert-name-error-${fertilizer.id}`;
-                                return (
-                                  <div key={fertilizer.id} className="fertilizer-row">
-                                    <div className="fertilizer-field">
-                                      <FormLabel
-                                        htmlFor={`fert-${fertilizer.id}`}
-                                        label="Fertilizer Name"
-                                      >
-                                        <select
-                                          id={`fert-${fertilizer.id}`}
-                                          value={fertilizer.useCustomName ? 'custom' : fertilizer.name}
-                                          onChange={(event) => handleFertilizerSelect(
-                                            chiefdom.id,
-                                            fertilizer.id,
-                                            event.target.value,
-                                          )}
-                                          aria-invalid={Boolean(ftEr.name)}
-                                          aria-describedby={ftEr.name ? FNameErrorId : undefined}
-                                        >
-                                          <option value="">Select fertilizer</option>
-                                          {fertilizerOptions.map((name) => (
-                                            <option key={name} value={name}>
-                                              {name}
-                                            </option>
-                                          ))}
-                                          <option value="custom">Other / Add manually</option>
-                                        </select>
-                                      </FormLabel>
-                                      {!fertilizer.useCustomName ? (
-                                        <FieldError
-                                          id={FNameErrorId}
-                                          message={ftEr.name}
-                                        />
-                                      ) : null}
-                                      {fertilizer.useCustomName ? (
-                                        <div className="form-field nested">
-                                          <FormLabel
-                                            htmlFor={`fert-custom-${fertilizer.id}`}
-                                            label="Custom Fertilizer Name"
-                                          >
-                                            <input
-                                              id={`fert-custom-${fertilizer.id}`}
-                                              type="text"
-                                              placeholder="Enter fertilizer name"
-                                              value={fertilizer.customName}
-                                              onChange={(event) => handleFertilizerFieldChange(
-                                                chiefdom.id,
-                                                fertilizer.id,
-                                                'customName',
-                                                event.target.value,
-                                              )}
-                                              aria-invalid={Boolean(ftEr.name)}
-                                              aria-describedby={
-                                                ftEr.name ? FNameErrorId : undefined
-                                              }
-                                              required
-                                            />
-                                          </FormLabel>
-                                          <FieldError
-                                            id={FNameErrorId}
-                                            message={ftEr.name}
-                                          />
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    <div className="form-field">
-                                      <FormLabel
-                                        htmlFor={`dealership-${fertilizer.id}`}
-                                        label="Fertilizer Dealership Name"
-                                      >
-                                        <select
-                                          id={`dealership-${fertilizer.id}`}
-                                          value={fertilizer.dealership}
-                                          onChange={(event) => handleFertilizerFieldChange(
-                                            chiefdom.id,
-                                            fertilizer.id,
-                                            'dealership',
-                                            event.target.value,
-                                          )}
-                                          aria-invalid={Boolean(ftEr.dealership)}
-                                          aria-describedby={ftEr.dealership ? `dealership-error-${fertilizer.id}` : undefined}
-                                        >
-                                          <option value="">Select a dealer</option>
-                                          {dealerOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                              {option.label}
-                                              {' '}
-                                              (
-                                              {option.licenseNumber}
-                                              )
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </FormLabel>
-                                      <FieldError
-                                        id={`dealership-error-${fertilizer.id}`}
-                                        message={ftEr.dealership}
-                                      />
-                                    </div>
-                                    <div className="bag-sizes-section">
-                                      <h6>Bag Sizes</h6>
-                                      <div className="bag-size-row">
-                                        <div className="form-field">
-                                          <FormLabel
-                                            htmlFor={`bag-25kg-${fertilizer.id}`}
-                                            label="25kg Bags"
-                                          >
-                                            <input
-                                              id={`bag-25kg-${fertilizer.id}`}
-                                              type="number"
-                                              min="0"
-                                              placeholder="0"
-                                              value={fertilizer.bag25kg || ''}
-                                              onChange={(event) => handleFertilizerFieldChange(
-                                                chiefdom.id,
-                                                fertilizer.id,
-                                                'bag25kg',
-                                                event.target.value,
-                                              )}
-                                              aria-invalid={Boolean(ftEr.bag25kg)}
-                                              aria-describedby={
-                                                ftEr.bag25kg
-                                                  ? `bag-25kg-error-${fertilizer.id}`
-                                                  : undefined
-                                              }
-                                              required
-                                            />
-                                          </FormLabel>
-                                          <FieldError
-                                            id={`bag-25kg-error-${fertilizer.id}`}
-                                            message={ftEr.bag25kg}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="bag-size-row">
-                                        <div className="form-field">
-                                          <FormLabel
-                                            htmlFor={`bag-50kg-${fertilizer.id}`}
-                                            label="50kg Bags"
-                                          >
-                                            <input
-                                              id={`bag-50kg-${fertilizer.id}`}
-                                              type="number"
-                                              min="0"
-                                              placeholder="0"
-                                              value={fertilizer.bag50kg || ''}
-                                              onChange={(event) => handleFertilizerFieldChange(
-                                                chiefdom.id,
-                                                fertilizer.id,
-                                                'bag50kg',
-                                                event.target.value,
-                                              )}
-                                              aria-invalid={Boolean(ftEr.bag50kg)}
-                                              aria-describedby={
-                                                ftEr.bag50kg
-                                                  ? `bag-50kg-error-${fertilizer.id}`
-                                                  : undefined
-                                              }
-                                              required
-                                            />
-                                          </FormLabel>
-                                          <FieldError
-                                            id={`bag-50kg-error-${fertilizer.id}`}
-                                            message={ftEr.bag50kg}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <FieldError
-                                      id={`bag-sizes-error-${fertilizer.id}`}
-                                      message={ftEr.bagSizes}
-                                    />
-                                    <>
-                                      {chiefdom.fertilizers.length > 1 ? (
-                                        <button
-                                          type="button"
-                                          className="remove-row-btn small"
-                                          onClick={() => hdleRmvFerti(chiefdom.id, fertilizer.id)}
-                                        >
-                                          Remove
-                                        </button>
-                                      ) : null}
-                                    </>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {(districtForm.chiefdoms || []).map((chiefdom, index) => (
+                    <ChiefdomCard
+                      key={chiefdom.id}
+                      chiefdom={chiefdom}
+                      index={index}
+                      districtForm={districtForm}
+                      referenceChiefdoms={referenceChiefdoms}
+                      fertilizerOptions={fertilizerOptions}
+                      dealerOptions={dealerOptions}
+                      onRemoveChiefdom={handleRemoveChiefdom}
+                      onToggleCollapse={handleToggleChiefdomCollapse}
+                      onChiefdomSelect={hdlChfSlct}
+                      onFieldChange={handleChiefdomFieldChange}
+                      onAddFertilizer={handleAddFertilizer}
+                      onFertilizerSelect={handleFertilizerSelect}
+                      onFertilizerFieldChange={handleFertilizerFieldChange}
+                      onRemoveFertilizer={hdleRmvFerti}
+                    />
+                  ))}
                 </div>
               </section>
               {formError ? <p className="modal-error">{formError}</p> : null}

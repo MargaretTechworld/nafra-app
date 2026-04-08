@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import {
-  MapPin, Pencil, Trash2, Plus, X,
-  Globe, LayoutGrid, Beaker, Map,
+  Globe, LayoutGrid, Beaker, MapPin, Pencil, Trash2, Plus, X,
 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { InputField, CustomSelect } from '../../ui/form-elements';
@@ -10,20 +9,17 @@ import {
   useAdminGetRegionsQuery,
   useAdminGetDistrictsQuery,
   useAdminGetChiefdomsQuery,
-  useAdminGetTownshipsQuery,
-  useAdminGetFertilizersQuery,
-  useAdminCreateRegionMutation,
-  useAdminDeleteRegionMutation,
-  useAdminCreateDistrictMutation,
-  useAdminUpdateDistrictMutation,
-  useAdminDeleteDistrictMutation,
-  useAdminCreateChiefdomMutation,
-  useAdminUpdateChiefdomMutation,
   useAdminDeleteChiefdomMutation,
-  useAdminCreateTownshipMutation,
-  useAdminDeleteTownshipMutation,
   useAdminCreateFertilizerMutation,
   useAdminDeleteFertilizerMutation,
+  useAdminCreateRegionMutation,
+  useAdminCreateDistrictMutation,
+  useAdminCreateChiefdomMutation,
+  useAdminUpdateDistrictMutation,
+  useAdminUpdateChiefdomMutation,
+  useAdminGetFertilizersQuery,
+  useAdminDeleteRegionMutation,
+  useAdminDeleteDistrictMutation,
 } from '../../../app/api/apiSlice';
 
 const EntityCard = ({
@@ -82,7 +78,6 @@ const ReferenceModal = ({
   const [createRegion] = useAdminCreateRegionMutation();
   const [createDistrict] = useAdminCreateDistrictMutation();
   const [createChiefdom] = useAdminCreateChiefdomMutation();
-  const [createTownship] = useAdminCreateTownshipMutation();
   const [createFertilizer] = useAdminCreateFertilizerMutation();
   const [updateDistrict] = useAdminUpdateDistrictMutation();
   const [updateChiefdom] = useAdminUpdateChiefdomMutation();
@@ -90,7 +85,7 @@ const ReferenceModal = ({
   // Parents for selection
   const { data: regions } = useAdminGetRegionsQuery();
   const { data: districts } = useAdminGetDistrictsQuery();
-  const { data: chiefdoms } = useAdminGetChiefdomsQuery();
+  useAdminGetChiefdomsQuery();
 
   useEffect(() => {
     if (data.id) {
@@ -125,7 +120,6 @@ const ReferenceModal = ({
           await createChiefdom(payload).unwrap();
         }
       }
-      if (type === 'Townships') await createTownship({ name: formData.name, chiefdom_id: formData.parent_id }).unwrap();
       if (type === 'Fertilizers') await createFertilizer({ name: formData.name }).unwrap();
 
       onClose();
@@ -182,16 +176,6 @@ const ReferenceModal = ({
                 required
               />
             )}
-            {type === 'Townships' && (
-              <CustomSelect
-                label="Parent Chiefdom"
-                placeholder="Select Chiefdom"
-                value={formData.parent_id}
-                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
-                options={(chiefdoms || []).map((c) => ({ value: c.id, label: c.name }))}
-                required
-              />
-            )}
           </div>
           <div className="p-6 bg-gray-50 rounded-b-2xl border-t border-gray-100 flex justify-end gap-3">
             <Button
@@ -220,7 +204,6 @@ ReferenceModal.propTypes = {
     name: PropTypes.string,
     region_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     district_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-    chiefdom_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }),
 };
 
@@ -235,16 +218,14 @@ const DistrictsView = () => {
   const { data: regions, isLoading: loadingR } = useAdminGetRegionsQuery();
   const { data: districts, isLoading: loadingD } = useAdminGetDistrictsQuery();
   const { data: chiefdoms, isLoading: loadingC } = useAdminGetChiefdomsQuery();
-  const { data: townships, isLoading: loadingT } = useAdminGetTownshipsQuery();
   const { data: fertilizers, isLoading: loadingF } = useAdminGetFertilizersQuery();
 
   const [delRegion] = useAdminDeleteRegionMutation();
   const [delDistrict] = useAdminDeleteDistrictMutation();
   const [delChief] = useAdminDeleteChiefdomMutation();
-  const [delTown] = useAdminDeleteTownshipMutation();
   const [delFert] = useAdminDeleteFertilizerMutation();
 
-  const isLoading = loadingR || loadingD || loadingC || loadingT || loadingF;
+  const isLoading = loadingR || loadingD || loadingC || loadingF;
 
   const handleDelete = (type, id) => {
     // eslint-disable-next-line no-alert
@@ -252,7 +233,6 @@ const DistrictsView = () => {
       if (type === 'Regions') delRegion(id);
       if (type === 'Districts') delDistrict(id);
       if (type === 'Chiefdoms') delChief(id);
-      if (type === 'Townships') delTown(id);
       if (type === 'Fertilizers') delFert(id);
     }
   };
@@ -261,7 +241,6 @@ const DistrictsView = () => {
     { id: 'Regions', icon: Globe },
     { id: 'Districts', icon: MapPin },
     { id: 'Chiefdoms', icon: LayoutGrid },
-    { id: 'Townships', icon: Map },
     { id: 'Fertilizers', icon: Beaker },
   ];
 
@@ -336,27 +315,12 @@ const DistrictsView = () => {
             <EntityCard
               key={c.id}
               icon={LayoutGrid}
-              title="Townships"
-              count={c.townships_count}
+              title="Reference Data"
+              count={0}
               name={c.name}
               onEdit={() => setModal({ open: true, data: c })}
               onDelete={() => handleDelete('Chiefdoms', c.id)}
             />
-          ))}
-          {activeTab === 'Townships' && townships?.map((t) => (
-            <div key={t.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
-              <div>
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{t.chiefdom?.name || 'Chiefdom'}</p>
-                <h4 className="text-xl font-black text-gray-900">{t.name}</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDelete('Townships', t.id)}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </div>
           ))}
           {activeTab === 'Fertilizers' && fertilizers?.map((f) => (
             <div key={f.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">

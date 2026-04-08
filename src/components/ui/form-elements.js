@@ -5,12 +5,14 @@ import { ChevronDown } from 'lucide-react';
 export const CustomSelect = ({
   label, placeholder, options, value, onChange,
 }) => {
-  const id = label.toLowerCase().replace(/\s+/g, '-');
+  const id = (label || 'select').toLowerCase().replace(/\s+/g, '-');
   return (
     <div className="space-y-2 w-full">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700 block text-left">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="text-sm font-medium text-gray-700 block text-left">
+          {label}
+        </label>
+      )}
       <div className="relative">
         <select
           id={id}
@@ -38,7 +40,7 @@ export const CustomSelect = ({
 };
 
 CustomSelect.propTypes = {
-  label: PropTypes.string.isRequired,
+  label: PropTypes.string,
   placeholder: PropTypes.string.isRequired,
   options: PropTypes.arrayOf(
     PropTypes.oneOfType([PropTypes.string, PropTypes.shape({
@@ -50,15 +52,21 @@ CustomSelect.propTypes = {
   onChange: PropTypes.func.isRequired,
 };
 
+CustomSelect.defaultProps = {
+  label: '',
+};
+
 export const InputField = ({
   label, placeholder, type = 'text', value, onChange,
 }) => {
-  const id = label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const id = (label || 'input').toLowerCase().replace(/[^a-z0-9]/g, '-');
   return (
     <div className="space-y-2 w-full">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700 block text-left">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className="text-sm font-medium text-gray-700 block text-left">
+          {label}
+        </label>
+      )}
       <input
         id={id}
         type={type}
@@ -72,7 +80,7 @@ export const InputField = ({
 };
 
 InputField.propTypes = {
-  label: PropTypes.string.isRequired,
+  label: PropTypes.string,
   placeholder: PropTypes.string,
   type: PropTypes.string,
   value: PropTypes.string,
@@ -80,6 +88,7 @@ InputField.propTypes = {
 };
 
 InputField.defaultProps = {
+  label: '',
   placeholder: '',
   type: 'text',
   value: '',
